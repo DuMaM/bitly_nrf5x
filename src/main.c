@@ -399,12 +399,14 @@ static void button_handler_cb(uint32_t button_state, uint32_t has_changed)
 	int err;
 	uint32_t buttons = button_state & has_changed;
 
-	if (buttons & DK_BTN1_MSK) {
-		printk("\nMaster role. Starting scanning\n");
-		scan_start();
-	} else if (buttons & DK_BTN2_MSK) {
+	if (buttons & (DK_BTN1_MSK | DK_BTN2_MSK)) {
+	#ifdef BOARD_PARTICLE_XENON
 		printk("\nSlave role. Starting advertising\n");
 		adv_start();
+	#else
+		printk("\nMaster role. Starting scanning\n");
+		scan_start();
+	#endif
 	} else {
 		return;
 	}
