@@ -27,10 +27,4 @@ include_directories("include")
 # NORDIC SDK APP END
 
 
-# add particle settings
-if("${BOARD_NAME}" STREQUAL "particle_xenon")
-	zephyr_include_directories("lib/include")
-	add_subdirectory("lib/particle_button_and_leds")
-endif()
-
 zephyr_library_include_directories(${ZEPHYR_BASE}/samples/bluetooth)
