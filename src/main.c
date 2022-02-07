@@ -5,7 +5,6 @@
  */
 
 #include <kernel.h>
-#include <console/console.h>
 #include <sys/printk.h>
 #include <string.h>
 #include <stdlib.h>
@@ -200,9 +199,8 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
 		return;
 	}
 
-	printk("Connected as %s\n",
-	       info.role == BT_CONN_ROLE_CENTRAL ? "central" : "peripheral");
-	printk("Conn. interval is %u (%04.2fms) units\n", info.le.interval, info.le.interval*1.25);
+	printk("Connected as %s\n", info.role == BT_CONN_ROLE_CENTRAL ? "central" : "peripheral");
+	printk("Conn. interval is %u units (%u ms)\n", info.le.interval, (uint32_t)(info.le.interval*UNIT_SCALER));
 
 	if (info.role == BT_CONN_ROLE_CENTRAL) {
 		err = bt_gatt_dm_start(default_conn,
@@ -262,8 +260,7 @@ static void scan_start(void)
 static void adv_start(void)
 {
 	struct bt_le_adv_param *adv_param =
-		BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE |
-				BT_LE_ADV_OPT_ONE_TIME,
+		BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
 				BT_GAP_ADV_FAST_INT_MIN_2,
 				BT_GAP_ADV_FAST_INT_MAX_2,
 				NULL);
@@ -307,8 +304,10 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
 {
 	printk("Connection parameters update request received.\n");
-	printk("Minimum interval: %d, Maximum interval: %d\n",
-	       param->interval_min, param->interval_max);
+	printk("Minimum interval: %d (%d ms), Maximum interval: %d (%d ms)\n",	param->interval_min,
+																			(uint32_t)(param->interval_min*UNIT_SCALER), 
+		   param->interval_max,
+																			(uint32_t)(param->interval_max*UNIT_SCALER));
 	printk("Latency: %d, Timeout: %d\n", param->latency, param->timeout);
 
 	return true;
@@ -318,8 +317,8 @@ static void le_param_updated(struct bt_conn *conn, uint16_t interval,
 			     uint16_t latency, uint16_t timeout)
 {
 	printk("Connection parameters updated.\n"
-	       " interval: %d, latency: %d, timeout: %d\n",
-	       interval, latency, timeout);
+		   " interval: %d (%d ms), latency: %d, timeout: %d\n",
+	       interval,  (uint32_t)(interval*UNIT_SCALER), latency, timeout);
 
 	k_sem_give(&throughput_sem);
 }
@@ -362,18 +361,27 @@ static uint8_t throughput_read(const struct bt_throughput_metrics *met)
 
 static void throughput_received(const struct bt_throughput_metrics *met)
 {
-	static uint32_t kb;
+	static uint32_t kb = 0;
+	static bool enter = true;
 
+	/* init case for new package sent */
 	if (met->write_len == 0) {
 		kb = 0;
 		printk("\n");
-
+		enter = false;
 		return;
 	}
 
 	if ((met->write_len / 1024) != kb) {
 		kb = (met->write_len / 1024);
 		printk("=");
+		enter = true;
+	}
+
+	/* add formatting */
+	if (! (kb % 64) && enter) {
+		printk("\n");
+		enter = false;
 	}
 }
 
@@ -429,7 +437,9 @@ static void buttons_init(void)
 		return;
 	}
 
-	/* Add dynamic buttons handler. Buttons should be activated only when
+	/*
+	 * Add dynamic buttons handler. 
+	 * Buttons should be activated only when
 	 * during the board role choosing.
 	 */
 	dk_button_handler_add(&button);
