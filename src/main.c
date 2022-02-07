@@ -24,6 +24,7 @@
 #include <shell/shell_uart.h>
 
 #include <dk_buttons_and_leds.h>
+#include <app_usb.h>
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
@@ -616,6 +617,8 @@ void main(void)
 		printk("Throughput service initialization failed.\n");
 		return;
 	}
+
+	app_usb();
 
 	printk("\n");
 	printk("Press button 1 on the master board.\n");

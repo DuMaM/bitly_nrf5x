@@ -6,7 +6,13 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-set(DTC_OVERLAY_FILE "dts.overlay")
+IF(DEFINED CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP)
+set(DTC_OVERLAY_FILE "nrf5340dk_nrf5340_cpuapp.overlay")
+ENDIF()
+
+IF(DEFINED CONFIG_BOARD_PARTICLE_XENON)
+set(DTC_OVERLAY_FILE "particle_xenon.overlay")
+ENDIF()
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(NONE)
@@ -16,6 +22,8 @@ FILE(GLOB app_sources src/*.c)
 target_sources(app PRIVATE
 	${app_sources}
 )
+
+include_directories("include")
 # NORDIC SDK APP END
 
 
