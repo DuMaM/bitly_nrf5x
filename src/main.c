@@ -24,11 +24,13 @@
 
 #include <dk_buttons_and_leds.h>
 #include <app_usb.h>
+#include "img_file.h"
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 #define INTERVAL_MIN	0x140	/* 320 units, 400 ms */
 #define INTERVAL_MAX	0x140	/* 320 units, 400 ms */
+#define UNIT_SCALER 	1.25
 
 #define THROUGHPUT_CONFIG_TIMEOUT K_SECONDS(20)
 
@@ -52,10 +54,6 @@ static const struct bt_data ad[] = {
 
 static const struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
-};
-
-static const char img[][103] = {
-#include "img.file"
 };
 
 static void button_handler_cb(uint32_t button_state, uint32_t has_changed);
