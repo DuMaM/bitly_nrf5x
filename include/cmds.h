@@ -25,12 +25,13 @@ static struct test_params {
 	struct bt_le_conn_param *conn_param;
 	struct bt_conn_le_phy_param *phy;
 	struct bt_conn_le_data_len_param *data_len;
-	bool   connection_mode;
+	bool   enable_rssi;
 } test_params = {
 	.conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY,
 				       SUPERVISION_TIMEOUT),
 	.phy = BT_CONN_LE_PHY_PARAM_2M,
-	.data_len = BT_LE_DATA_LEN_PARAM_MAX
+	.data_len = BT_LE_DATA_LEN_PARAM_MAX,
+	.enable_rssi = true,
 };
 
 #endif /* _CMDS_H_ */
