@@ -5,7 +5,6 @@
  */
 
 #include <cmds.h>
-#include <ctype.h>
 
 static int default_cmd(const struct shell *shell, size_t argc,
                char **argv)
@@ -191,29 +190,15 @@ static int conn_interval_cmd(const struct shell *shell, size_t argc,
 }
 
 int8_t atob(const char* buffer) {    
-    #define lookup_size 3
-    const static char *lookup_negative[lookup_size] = { "false", "0", "n" };
-    const static char *lookup_positive[lookup_size] = {  "true", "1", "y" };
-
-    const char *iter = buffer;
-    int8_t len = strlen(buffer);
-    char buffer_copy[len+1];
-    buffer_copy[len] = '\0';
-    char *iter_copy = buffer_copy;
-
-    while(buffer+len != iter) {
-        if (isalnum(*iter)) {
-            *iter_copy = *iter;
-            iter_copy++;
-        }
-        iter++;
-    }
+    #define lookup_size 4
+    const static char *lookup_negative[lookup_size] = { "false", "0", "n",  "no" };
+    const static char *lookup_positive[lookup_size] = {  "true", "1", "y", "yes" };
 
     for (int i = 0; i < lookup_size; i++) {
-        if (!strcmp(lookup_negative[i],buffer_copy)) 
+        if (!strcmp(lookup_negative[i],buffer)) 
             return 0;
         
-        if (!strcmp(lookup_positive[i],buffer_copy))
+        if (!strcmp(lookup_positive[i],buffer))
             return 1;
     }
 
