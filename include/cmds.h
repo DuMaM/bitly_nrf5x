@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <shell/shell.h>
 #include <zephyr/types.h>
+#include <sys/printk.h>
 
 #include <stdlib.h>
 
@@ -21,17 +22,13 @@ enum CONNECTION_MODE {
 	CONNECTION_MASTER,
 	CONNECTION_SLAVE
 };
-static struct test_params {
+typedef struct {
 	struct bt_le_conn_param *conn_param;
 	struct bt_conn_le_phy_param *phy;
 	struct bt_conn_le_data_len_param *data_len;
 	bool   enable_rssi;
-} test_params = {
-	.conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY,
-				       SUPERVISION_TIMEOUT),
-	.phy = BT_CONN_LE_PHY_PARAM_2M,
-	.data_len = BT_LE_DATA_LEN_PARAM_MAX,
-	.enable_rssi = true,
-};
+} test_params_t;
+
+void instruction_print(void);
 
 #endif /* _CMDS_H_ */

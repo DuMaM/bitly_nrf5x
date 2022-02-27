@@ -25,6 +25,7 @@
 #include <dk_buttons_and_leds.h>
 #include <app_usb.h>
 #include "img_file.h"
+#include <cmds.h>
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
@@ -67,13 +68,6 @@ static const char *phy2str(uint8_t phy)
     case BT_GAP_LE_PHY_CODED: return "LE Coded";
     default: return "Unknown";
     }
-}
-
-static void instruction_print(void)
-{
-    printk("\nType 'config' to change the configuration parameters.\n");
-    printk("You can use the Tab key to autocomplete your input.\n");
-    printk("Type 'run' when you are ready to run the test.\n");
 }
 
 void scan_filter_match(struct bt_scan_device_info *device_info,

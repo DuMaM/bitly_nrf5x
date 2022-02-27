@@ -6,6 +6,14 @@
 
 #include <cmds.h>
 
+test_params_t test_params = {
+	.conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY,
+				       SUPERVISION_TIMEOUT),
+	.phy = BT_CONN_LE_PHY_PARAM_2M,
+	.data_len = BT_LE_DATA_LEN_PARAM_MAX,
+	.enable_rssi = true,
+};
+
 static int default_cmd(const struct shell *shell, size_t argc,
                char **argv)
 {
@@ -240,6 +248,13 @@ static int print_cmd(const struct shell *shell, size_t argc,
             test_params.conn_param->interval_min,
             phy_str(test_params.phy));
     return 0;
+}
+
+void instruction_print(void)
+{
+    printk("\nType 'config' to change the configuration parameters.\n");
+    printk("You can use the Tab key to autocomplete your input.\n");
+    printk("Type 'run' when you are ready to run the test.\n");
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,

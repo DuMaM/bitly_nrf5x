@@ -1,5 +1,7 @@
 #include <cmds.h>
 
+extern test_params_t test_params;
+
 extern int test_run(const struct shell *shell,
             const struct bt_le_conn_param *conn_param,
             const struct bt_conn_le_phy_param *phy,
