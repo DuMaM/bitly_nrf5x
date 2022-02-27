@@ -34,7 +34,7 @@
 #include <usb/usb_device.h>
 #include <sys/printk.h>
 
-void app_usb(void)
+void app_usb_init(void)
 {
 #ifdef CONFIG_BOARD_PARTICLE_XENON
 
