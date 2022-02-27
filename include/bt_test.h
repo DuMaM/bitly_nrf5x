@@ -24,7 +24,10 @@
 void bt_init(void);
 struct bt_conn* getSettings(void);
 volatile bool isTestReady(void);
+
 void scan_start(void);
+void adv_start(void);
+
 int connection_configuration_set(const struct shell *shell,
                                  const struct bt_le_conn_param *conn_param,
                                  const struct bt_conn_le_phy_param *phy,

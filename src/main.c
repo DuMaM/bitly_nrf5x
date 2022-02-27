@@ -4,15 +4,12 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <kernel.h>
-#include <sys/printk.h>
-#include <string.h>
-#include <stdlib.h>
-
 #include <app_usb.h>
 #include <cmds.h>
 #include <pio.h>
 #include <bt_test.h>
+
+#include <sys/printk.h>
 
 void main(void)
 {

@@ -222,7 +222,7 @@ void scan_start(void)
     }
 }
 
-static void adv_start(void)
+void adv_start(void)
 {
     struct bt_le_adv_param *adv_param =
         BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
@@ -436,7 +436,7 @@ int connection_configuration_set(const struct shell *shell,
 }
 
 void bt_init(void) {
-    int err;
+    int err = -1;
 
     static struct bt_conn_cb conn_callbacks = {
         .connected = connected,
