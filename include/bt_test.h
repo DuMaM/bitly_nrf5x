@@ -15,10 +15,6 @@
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
-#define INTERVAL_MIN	0x140	/* 320 units, 400 ms */
-#define INTERVAL_MAX	0x140	/* 320 units, 400 ms */
-#define UNIT_SCALER 	1.25
-
 #define THROUGHPUT_CONFIG_TIMEOUT K_SECONDS(20)
 
 void bt_init(void);

@@ -10,9 +10,10 @@
 
 #include <stdlib.h>
 
-#define INTERVAL_MIN 0x140 /* 320 units, 400 ms */
+#define INTERVAL_MIN 0x004 /*   4 units,  10 ms */
 #define INTERVAL_MAX 0x140 /* 320 units, 400 ms */
 #define CONN_LATENCY 0
+#define UNIT_SCALER  1.25
 
 #define MIN_CONN_INTERVAL   6
 #define MAX_CONN_INTERVAL   3200

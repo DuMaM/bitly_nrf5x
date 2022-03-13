@@ -183,38 +183,6 @@ For the tester::
    LE PHY updated: TX PHY LE 2M, RX PHY LE 2M
    LE Data length update pending
    LE data len updated: TX (len: 251 time: 2120) RX (len: 251 time: 2120)
-
-                       ^.-.^                               ^..^
-                    ^-/ooooo+:.^                       ^.--:+syo/.
-                 ^-/oooooooooooo+:.                 ^.-:::::+yyyyyy+:^
-              ^-/+oooooooooooooooooo/-^          ^.-::::::::/yyyyyyyhhs/-
-           ^-:/++++oooooooooooooooooooo+:.   ^.-::::::::::::/yyyyyyyhhhhhho:^
-         ^::///++++oooooooooooooooooooooooo//:::::::::::::::/yyyyyyyhhhhhddds
-         -::://+++ooooooooooooooooooooooooooooo+/:::::::::::/yyyyyyyhhhhhdddd^
-         -::::::/++ooooooooooooooooooooooooooooooo+/::::::::/yyyyyyyhhhhhdddd^
-         -:::::::::/+ooooooooooooooooooooooooooooossso+/::::/yyyyyyyhhhhhdddd^
-         -::::::::::::/+oooooooooooooooooooooooooossssssso+//yyyyyyyhhhhhdddd^
-         -::::::::::::::::/+ooooooooooooooooooooooossssssssssyyyyyyyhhhhhdddd.
-         -:::::::::::::::::::/+oooooooooooooooooooossssssssssyyyyyyyhhhhhdddd.
-         -:::::::::::::::::::::::/+ooooooooooooooosssssssssssyyyyyyyhhhhhdddd.
-         -::::::::::::::::::::::::::/+ooooooooooooossssssssssyyyyyyyhhhhhdddd.
-         -::::::::::::::::::::::::::::::/+ooooooooossssssssssyyyyyyyhhhhhdddd-
-         -:::::::::::::::::::::::::::::::::/+ooooosssssssssssyyyyyyyhhhhhdddd-
-         -:::::::::::::::::::::::::::::::::::::/+oossssssssssyyyyyyyhhhhhdddd:
-         -::::::::::::::::::::::::::::::::::::::::/+ossssssssyyyyyyyhhhhhdddd:
-         -::::::::::::::::::::::::::::::::::::::::::::/osssssyyyyyyyhhhhhdddd:
-         -:::::::::::::::::::::::::::::::::::::::::::::::/+ossyyyyyyhhhhhdddd:
-         -:::::::::::::::::o+/:::::::::::::::::::::::::::::::+oyyyyyhhhhhdddd:
-         -:::::::::::::::::ossyso/::::::::::::::::::::::::::::::/osyhhhhhdddd/
-         -:::::::::::::::::ossyyyyys+:::::::::::::::::::::::::::::::+shhhdddd/
-         -:::::::::::::::::ossyyyyhhhhyo/::::::::::::::::::::::::::::::/oyddd/
-         .-::::::::::::::::ossyyyyhhhhddddy/-::::::::::::::::::::::::::::::+y:
-           ^.-:::::::::::::ossyyyyhhhhdhs/.  ^.--:::::::::::::::::::::::::-.^
-              ^.--:::::::::ossyyyyhhy+-^         ^.-::::::::::::::::::--.^
-                  ^.-::::::ossyyyo/.                ^^.-:::::::::::-.^
-                     ^..-::oss+:^                       ^.-:::::-.^
-                         ^.:.^                             ^^.^^
-
    Done
    [local] sent 612684 bytes (598 KB) in 3890 ms at 1260 kbps
    [peer] received 612684 bytes (598 KB) in 2511 GATT writes at 1395626 bps

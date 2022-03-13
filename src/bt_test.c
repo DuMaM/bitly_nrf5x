@@ -347,7 +347,7 @@ static void get_rssi_power(struct bt_conn *conn)
 		printk("Get rssi power value (err: %d)\n", err);
 	} else {
 		rp = (struct bt_hci_rp_read_rssi *)(rsp->data);
-		printk("RSSI power returned by command: %\n" PRId8, rp->rssi);
+		printk("RSSI power returned by command: %"PRId8"\n", rp->rssi);
 	}
 
 	if (rsp) {
@@ -356,6 +356,13 @@ static void get_rssi_power(struct bt_conn *conn)
 	
 }
 
+static void get_tx_power(struct bt_conn *conn) {
+    struct bt_conn_le_tx_power tx_power = {.phy = 0};
+    int error = bt_conn_le_get_tx_power_level(conn, &tx_power);
+    if ( !error ) {
+        printk("TX power returned by command: %"PRId8"\n", tx_power.current_level);
+    }
+}
 
 static uint8_t throughput_read(const struct bt_throughput_metrics *met)
 {
@@ -386,8 +393,6 @@ static void throughput_received(const struct bt_throughput_metrics *met)
 
     if ((met->write_len / 1024) != kb) {
         kb = (met->write_len / 1024);
-	get_rssi_power(default_conn);
-
         printk("=");
         enter = true;
     }
@@ -395,6 +400,8 @@ static void throughput_received(const struct bt_throughput_metrics *met)
     /* add formatting */
     if (! (kb % 64) && enter) {
         printk("\n");
+        get_rssi_power(default_conn);
+	    get_tx_power(default_conn);
         enter = false;
     }
 }
