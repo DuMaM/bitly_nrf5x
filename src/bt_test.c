@@ -1,6 +1,7 @@
 #include <bt_test.h>
 #include <zephyr/types.h>
 #include <cmds.h>
+#include <sys/byteorder.h>
 
 K_SEM_DEFINE(throughput_sem, 0, 1);
 
@@ -44,6 +45,8 @@ static const char *phy2str(uint8_t phy)
     }
 }
 
+// ##### SCAN
+
 void scan_filter_match(struct bt_scan_device_info *device_info,
                struct bt_scan_filter_match *filter_match,
                bool connectable)
@@ -74,6 +77,8 @@ void scan_connecting_error(struct bt_scan_device_info *device_info)
 
 BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match,
         scan_connecting_error, NULL);
+
+// ##### End
 
 static void exchange_func(struct bt_conn *conn, uint8_t att_err,
               struct bt_gatt_exchange_params *params)
@@ -312,6 +317,46 @@ static void le_data_length_updated(struct bt_conn *conn,
     k_sem_give(&throughput_sem);
 }
 
+static void get_rssi_power(struct bt_conn *conn)
+{
+	uint16_t conn_handle;
+
+	int err = bt_hci_get_conn_handle(conn, &conn_handle);
+
+	if (err) {
+		printk("No connection handle (err %d)", err);
+		return;
+	}
+
+	struct bt_hci_cp_read_rssi *cp;
+	struct bt_hci_rp_read_rssi *rp;
+	struct net_buf *buf;
+	struct net_buf *rsp = NULL;
+
+	buf = bt_hci_cmd_create(BT_HCI_OP_READ_RSSI, sizeof(*cp));
+	if (!buf) {
+		printk("Cannot allocate buffer to get RSSI power");
+		return;
+	}
+
+	cp = net_buf_add(buf, sizeof(*cp));
+	cp->handle = sys_cpu_to_le16(conn_handle);
+
+	err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_RSSI, buf, &rsp);
+	if (err) {
+		printk("Get rssi power value (err: %d)\n", err);
+	} else {
+		rp = (struct bt_hci_rp_read_rssi *)(rsp->data);
+		printk("RSSI power returned by command: %\n" PRId8, rp->rssi);
+	}
+
+	if (rsp) {
+		net_buf_unref(rsp);
+	}
+	
+}
+
+
 static uint8_t throughput_read(const struct bt_throughput_metrics *met)
 {
     printk("[peer] received %u bytes (%u KB)"
@@ -319,10 +364,12 @@ static uint8_t throughput_read(const struct bt_throughput_metrics *met)
            met->write_len, met->write_len / 1024, met->write_count,
            met->write_rate);
 
+    
     k_sem_give(&throughput_sem);
 
     return BT_GATT_ITER_STOP;
 }
+
 
 static void throughput_received(const struct bt_throughput_metrics *met)
 {
@@ -339,6 +386,8 @@ static void throughput_received(const struct bt_throughput_metrics *met)
 
     if ((met->write_len / 1024) != kb) {
         kb = (met->write_len / 1024);
+	get_rssi_power(default_conn);
+
         printk("=");
         enter = true;
     }
