@@ -7,12 +7,13 @@ K_SEM_DEFINE(throughput_sem, 0, 1);
 
 static volatile bool data_length_req;
 static volatile bool test_ready;
-static struct bt_conn *default_conn;
+struct bt_conn *default_conn;
 static struct bt_uuid *uuid128 = BT_UUID_THROUGHPUT;
 static struct bt_gatt_exchange_params exchange_params;
 static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, 0, 400);
 
 struct bt_throughput throughput;
+extern const struct bt_throughput_cb throughput_cb;
 
 struct bt_conn* getSettings(void) {
     return default_conn;
@@ -316,109 +317,6 @@ static void le_data_length_updated(struct bt_conn *conn,
     data_length_req = false;
     k_sem_give(&throughput_sem);
 }
-
-static void get_rssi_power(struct bt_conn *conn)
-{
-	uint16_t conn_handle;
-
-	int err = bt_hci_get_conn_handle(conn, &conn_handle);
-
-	if (err) {
-		printk("No connection handle (err %d)", err);
-		return;
-	}
-
-	struct bt_hci_cp_read_rssi *cp;
-	struct bt_hci_rp_read_rssi *rp;
-	struct net_buf *buf;
-	struct net_buf *rsp = NULL;
-
-	buf = bt_hci_cmd_create(BT_HCI_OP_READ_RSSI, sizeof(*cp));
-	if (!buf) {
-		printk("Cannot allocate buffer to get RSSI power");
-		return;
-	}
-
-	cp = net_buf_add(buf, sizeof(*cp));
-	cp->handle = sys_cpu_to_le16(conn_handle);
-
-	err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_RSSI, buf, &rsp);
-	if (err) {
-		printk("Get rssi power value (err: %d)\n", err);
-	} else {
-		rp = (struct bt_hci_rp_read_rssi *)(rsp->data);
-		printk("RSSI power returned by command: %"PRId8"\n", rp->rssi);
-	}
-
-	if (rsp) {
-		net_buf_unref(rsp);
-	}
-	
-}
-
-static void get_tx_power(struct bt_conn *conn) {
-    struct bt_conn_le_tx_power tx_power = {.phy = 0};
-    int error = bt_conn_le_get_tx_power_level(conn, &tx_power);
-    if ( !error ) {
-        printk("TX power returned by command: %"PRId8"\n", tx_power.current_level);
-    }
-}
-
-static uint8_t throughput_read(const struct bt_throughput_metrics *met)
-{
-    printk("[peer] received %u bytes (%u KB)"
-           " in %u GATT writes at %u bps\n",
-           met->write_len, met->write_len / 1024, met->write_count,
-           met->write_rate);
-
-    
-    k_sem_give(&throughput_sem);
-
-    return BT_GATT_ITER_STOP;
-}
-
-
-static void throughput_received(const struct bt_throughput_metrics *met)
-{
-    static uint32_t kb = 0;
-    static bool enter = true;
-
-    /* init case for new package sent */
-    if (met->write_len == 0) {
-        kb = 0;
-        printk("\n");
-        enter = false;
-        return;
-    }
-
-    if ((met->write_len / 1024) != kb) {
-        kb = (met->write_len / 1024);
-        printk("=");
-        enter = true;
-    }
-
-    /* add formatting */
-    if (! (kb % 64) && enter) {
-        printk("\n");
-        get_rssi_power(default_conn);
-	    get_tx_power(default_conn);
-        enter = false;
-    }
-}
-
-static void throughput_send(const struct bt_throughput_metrics *met)
-{
-    printk("\n[local] received %u bytes (%u KB)"
-        " in %u GATT writes at %u bps\n",
-        met->write_len, met->write_len / 1024,
-        met->write_count, met->write_rate);
-}
-
-static const struct bt_throughput_cb throughput_cb = {
-    .data_read = throughput_read,
-    .data_received = throughput_received,
-    .data_send = throughput_send
-};
 
 int connection_configuration_set(const struct shell *shell,
             const struct bt_le_conn_param *conn_param,

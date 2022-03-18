@@ -14,8 +14,7 @@ test_params_t test_params = {
 	.enable_rssi = true,
 };
 
-static int default_cmd(const struct shell *shell, size_t argc,
-               char **argv)
+int default_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     if (argc == 1) {
         shell_help(shell);
@@ -64,8 +63,7 @@ static const char *phy_str(const struct bt_conn_le_phy_param *phy)
     }
 }
 
-static int cmd_phy_1m(const struct shell *shell, size_t argc,
-              char **argv)
+static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
 {
     test_params.phy->options = BT_CONN_LE_PHY_OPT_NONE;
     test_params.phy->pref_rx_phy = BT_GAP_LE_PHY_1M;
@@ -76,8 +74,7 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc,
     return 0;
 }
 
-static int cmd_phy_2m(const struct shell *shell, size_t argc,
-              char **argv)
+static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
 {
     test_params.phy->options = BT_CONN_LE_PHY_OPT_NONE;
     test_params.phy->pref_rx_phy = BT_GAP_LE_PHY_2M;
@@ -89,8 +86,7 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc,
 }
 
 #if defined(RADIO_MODE_MODE_Ble_LR500Kbit) || defined(NRF5340_XXAA_APPLICATION)
-static int cmd_phy_coded_s2(const struct shell *shell, size_t argc,
-                char **argv)
+static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
 {
     test_params.phy->options = BT_CONN_LE_PHY_OPT_CODED_S2;
     test_params.phy->pref_rx_phy = BT_GAP_LE_PHY_CODED;
@@ -100,13 +96,13 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc,
 
     return 0;
 }
-#endif /* defined(RADIO_MODE_MODE_Ble_LR1500Kbit) ||
-    * defined(NRF5340_XXAA_APPLICATION)
-    */
+#endif /* 
+        * defined(RADIO_MODE_MODE_Ble_LR1500Kbit) ||
+        * defined(NRF5340_XXAA_APPLICATION)
+        */
 
 #if defined(RADIO_MODE_MODE_Ble_LR125Kbit) || defined(NRF5340_XXAA_APPLICATION)
-static int cmd_phy_coded_s8(const struct shell *shell, size_t argc,
-                char **argv)
+static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
 {
     test_params.phy->options = BT_CONN_LE_PHY_OPT_CODED_S8;
     test_params.phy->pref_rx_phy = BT_GAP_LE_PHY_CODED;
@@ -118,14 +114,13 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc,
     return 0;
 }
 #endif /* 
- * defined(RADIO_MODE_MODE_Ble_LR125Kbit) ||
- * defined(NRF5340_XXAA_APPLICATION)
- */
+        * defined(RADIO_MODE_MODE_Ble_LR125Kbit) ||
+        * defined(NRF5340_XXAA_APPLICATION)
+        */
 
 
 // data len
-static int data_len_cmd(const struct shell *shell, size_t argc,
-            char **argv)
+static int data_len_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     uint16_t data_len;
 
@@ -159,8 +154,7 @@ static int data_len_cmd(const struct shell *shell, size_t argc,
     return 0;
 }
 
-static int conn_interval_cmd(const struct shell *shell, size_t argc,
-                 char **argv)
+static int conn_interval_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     uint16_t interval;
 
@@ -197,7 +191,8 @@ static int conn_interval_cmd(const struct shell *shell, size_t argc,
     return 0;
 }
 
-int8_t atob(const char* buffer) {    
+int8_t atob(const char* buffer) 
+{    
     #define lookup_size 4
     const static char *lookup_negative[lookup_size] = { "false", "0", "n",  "no" };
     const static char *lookup_positive[lookup_size] = {  "true", "1", "y", "yes" };

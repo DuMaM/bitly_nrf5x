@@ -31,5 +31,6 @@ typedef struct {
 } test_params_t;
 
 void instruction_print(void);
+int default_cmd(const struct shell *shell, size_t argc, char **argv);
 
 #endif /* _CMDS_H_ */
