@@ -3,17 +3,17 @@
 #include <cmds.h>
 #include <sys/byteorder.h>
 
-K_SEM_DEFINE(throughput_sem, 0, 1);
+K_SEM_DEFINE(performance_test_sem, 0, 1);
 
 static volatile bool data_length_req;
 static volatile bool test_ready;
 struct bt_conn *default_conn;
-static struct bt_uuid *uuid128 = BT_UUID_THROUGHPUT;
+static struct bt_uuid *uuid128 = BT_UUID_PERF_TEST;
 static struct bt_gatt_exchange_params exchange_params;
 static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, 0, 400);
 
-struct bt_throughput throughput;
-extern const struct bt_throughput_cb throughput_cb;
+struct bt_performance_test performance_test;
+extern const struct bt_performance_test_cb performance_test_cb;
 
 struct bt_conn* getSettings(void) {
     return default_conn;
@@ -105,12 +105,12 @@ static void discovery_complete(struct bt_gatt_dm *dm,
                    void *context)
 {
     int err;
-    struct bt_throughput *throughput = context;
+    struct bt_performance_test *performance_test = context;
 
     printk("Service discovery completed\n");
 
     bt_gatt_dm_data_print(dm);
-    bt_throughput_handles_assign(dm, throughput);
+    bt_performance_test_handles_assign(dm, performance_test);
     bt_gatt_dm_data_release(dm);
 
     exchange_params.func = exchange_func;
@@ -176,9 +176,9 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
 
     if (info.role == BT_CONN_ROLE_CENTRAL) {
         err = bt_gatt_dm_start(default_conn,
-                       BT_UUID_THROUGHPUT,
+                       BT_UUID_PERF_TEST,
                        &discovery_cb,
-                       &throughput);
+                       &performance_test);
 
         if (err) {
             printk("Discover failed (err %d)\n", err);
@@ -276,7 +276,7 @@ static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
 {
     printk("Connection parameters update request received.\n");
     printk("Minimum interval: %d (%d ms), Maximum interval: %d (%d ms)\n",	param->interval_min,
-                                                                            (uint32_t)(param->interval_min*UNIT_SCALER), 
+                                                                            (uint32_t)(param->interval_min*UNIT_SCALER),
                                                                             param->interval_max,
                                                                             (uint32_t)(param->interval_max*UNIT_SCALER));
     printk("Latency: %d, Timeout: %d\n", param->latency, param->timeout);
@@ -291,7 +291,7 @@ static void le_param_updated(struct bt_conn *conn, uint16_t interval,
            " interval: %d (%d ms), latency: %d, timeout: %d\n",
            interval,  (uint32_t)(interval*UNIT_SCALER), latency, timeout);
 
-    k_sem_give(&throughput_sem);
+    k_sem_give(&performance_test_sem);
 }
 
 static void le_phy_updated(struct bt_conn *conn,
@@ -300,7 +300,7 @@ static void le_phy_updated(struct bt_conn *conn,
     printk("LE PHY updated: TX PHY %s, RX PHY %s\n",
            phy2str(param->tx_phy), phy2str(param->rx_phy));
 
-    k_sem_give(&throughput_sem);
+    k_sem_give(&performance_test_sem);
 }
 
 static void le_data_length_updated(struct bt_conn *conn,
@@ -315,7 +315,7 @@ static void le_data_length_updated(struct bt_conn *conn,
            info->tx_max_time, info->rx_max_len, info->rx_max_time);
 
     data_length_req = false;
-    k_sem_give(&throughput_sem);
+    k_sem_give(&performance_test_sem);
 }
 
 int connection_configuration_set(const struct shell *shell,
@@ -344,7 +344,7 @@ int connection_configuration_set(const struct shell *shell,
     }
 
     shell_print(shell, "PHY update pending");
-    err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
+    err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
     if (err) {
         shell_error(shell, "PHY update timeout");
         return err;
@@ -361,7 +361,7 @@ int connection_configuration_set(const struct shell *shell,
         }
 
         shell_print(shell, "LE Data length update pending");
-        err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
+        err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
         if (err) {
             shell_error(shell, "LE Data Length update timeout");
             return err;
@@ -378,7 +378,7 @@ int connection_configuration_set(const struct shell *shell,
         }
 
         shell_print(shell, "Connection parameters update pending");
-        err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
+        err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
         if (err) {
             shell_error(shell,
                     "Connection parameters update timeout");
@@ -401,7 +401,7 @@ void bt_init(void) {
         .le_data_len_updated = le_data_length_updated
     };
 
-    printk("Starting Bluetooth Throughput example\n");
+    printk("Starting Bluetooth Performance test example\n");
 
     bt_conn_cb_register(&conn_callbacks);
 
@@ -415,9 +415,9 @@ void bt_init(void) {
 
     scan_init();
 
-    err = bt_throughput_init(&throughput, &throughput_cb);
+    err = bt_performance_test_init(&performance_test, &performance_test_cb);
     if (err) {
-        printk("Throughput service initialization failed.\n");
+        printk("Performance test service initialization failed.\n");
         return;
     }
 }

@@ -1,6 +1,6 @@
-.. _ble_throughput:
+.. _ble_performance_test:
 
-Bluetooth: Throughput
+Bluetooth: Performance test
 #####################
 
 .. contents::
@@ -10,14 +10,14 @@ Bluetooth: Throughput
 .. note::
    The implementation and usage of this sample has changed considerably with |NCS| v1.5.0.
 
-The Bluetooth® Throughput sample uses the :ref:`throughput_readme` to measure Bluetooth® Low Energy throughput performance.
-You can use it to determine the maximum throughput, or to experiment with different connection parameters and check their influence on the throughput.
+The Bluetooth® Performance test sample uses the :ref:`performance_test_readme` to measure Bluetooth® Low Energy performance test performance.
+You can use it to determine the maximum performance test, or to experiment with different connection parameters and check their influence on the performance test.
 
 Overview
 ********
 
-The sample transmits data between two development kits, the *tester* and the *peer*, and measures the throughput performance.
-It uses the :ref:`throughput_readme` for this.
+The sample transmits data between two development kits, the *tester* and the *peer*, and measures the performance test performance.
+It uses the :ref:`performance_test_readme` for this.
 To run the tests, connect to the kit using the serial port and send shell commands.
 Zephyr's :ref:`zephyr:shell_api` module is used to handle the commands.
 
@@ -25,14 +25,14 @@ The sample demonstrates the interaction of the following connection parameters:
 
 ATT_MTU size
    In *Bluetooth* Low Energy, the default Maximum Transmission Unit (MTU) is 23 bytes.
-   When increasing this value, longer ATT payloads can be achieved, increasing ATT throughput.
+   When increasing this value, longer ATT payloads can be achieved, increasing ATT performance test.
 
 .. note::
    To configure the ATT_MTU size, use menuconfig and compile and program the sample again.
 
 Data length
    In *Bluetooth* Low Energy, the default data length for a radio packet is 27 bytes.
-   Data length extension allows to use larger radio packets, so that more data can be sent in one packet, increasing throughput.
+   Data length extension allows to use larger radio packets, so that more data can be sent in one packet, increasing performance test.
 
 Connection interval
    The connection interval defines how often the devices must listen on the radio.
@@ -107,7 +107,7 @@ Button 2:
 
 Building and running
 ********************
-.. |sample path| replace:: :file:`samples/bluetooth/throughput`
+.. |sample path| replace:: :file:`samples/bluetooth/performance_test`
 
 .. include:: /includes/build_and_run.txt
 
@@ -136,7 +136,7 @@ After programming the sample to both kits, test it by performing the following s
 #. Observe the output while the tester sends data to the peer.
    At the end of the test, both tester and peer display the results of the test.
 #. Repeat the test after changing the parameters.
-   Observe how the throughput changes for different sets of parameters.
+   Observe how the performance test changes for different sets of parameters.
 
 
 Sample output
@@ -147,7 +147,7 @@ The result should look similar to the following output.
 For the tester::
 
    *** Booting Zephyr OS build v2.4.0-ncs1-1715-g3366927a5498  ***
-   Starting Bluetooth Throughput example
+   Starting Bluetooth Performance test example
    I: SoftDevice Controller build revision:
    I: 7a 01 b4 17 68 14 99 b6 |z...h...
    I: 6a d1 f2 fd fe 59 63 e3 |j....Yc.
@@ -178,7 +178,7 @@ For the tester::
    Type 'run' when you are ready to run the test.
    run
 
-   ==== Starting throughput test ====
+   ==== Starting performance test ====
    PHY update pending
    LE PHY updated: TX PHY LE 2M, RX PHY LE 2M
    LE Data length update pending
@@ -195,7 +195,7 @@ For the tester::
 For the peer::
 
    *** Booting Zephyr OS build v2.4.0-ncs1-1715-g3366927a5498  ***
-   Starting Bluetooth Throughput example
+   Starting Bluetooth Performance test example
    I: SoftDevice Controller build revision:
    I: 7a 01 b4 17 68 14 99 b6 |z...h...
    I: 6a d1 f2 fd fe 59 63 e3 |j....Yc.
@@ -235,7 +235,7 @@ Dependencies
 
 This sample uses the following |NCS| libraries:
 
-* :ref:`throughput_readme`
+* :ref:`performance_test_readme`
 
 In addition, it uses the following Zephyr libraries:
 

@@ -44,7 +44,7 @@ static void get_rssi_power(struct bt_conn *conn)
 	if (rsp) {
 		net_buf_unref(rsp);
 	}
-	
+
 }
 
 static void get_tx_power(struct bt_conn *conn) {
@@ -55,20 +55,20 @@ static void get_tx_power(struct bt_conn *conn) {
     }
 }
 
-static uint8_t throughput_read(const struct bt_throughput_metrics *met)
+static uint8_t performance_test_read(const struct bt_performance_test_metrics *met)
 {
     printk("[peer] received %u bytes (%u KB)"
            " in %u GATT writes at %u bps\n",
            met->write_len, met->write_len / 1024, met->write_count,
            met->write_rate);
 
-    
-    k_sem_give(&throughput_sem);
+
+    k_sem_give(&performance_test_sem);
 
     return BT_GATT_ITER_STOP;
 }
 
-static void throughput_received(const struct bt_throughput_metrics *met)
+static void performance_test_received(const struct bt_performance_test_metrics *met)
 {
     static uint32_t kb = 0;
     static bool enter = true;
@@ -96,7 +96,7 @@ static void throughput_received(const struct bt_throughput_metrics *met)
     }
 }
 
-static void throughput_send(const struct bt_throughput_metrics *met)
+static void performance_test_send(const struct bt_performance_test_metrics *met)
 {
     printk("\n[local] received %u bytes (%u KB)"
         " in %u GATT writes at %u bps\n",
@@ -104,10 +104,10 @@ static void throughput_send(const struct bt_throughput_metrics *met)
         met->write_count, met->write_rate);
 }
 
-const struct bt_throughput_cb throughput_cb = {
-    .data_read = throughput_read,
-    .data_received = throughput_received,
-    .data_send = throughput_send
+const struct bt_performance_test_cb performance_test_cb = {
+    .data_read = performance_test_read,
+    .data_received = performance_test_received,
+    .data_send = performance_test_send
 };
 
 int test_init(                  const struct shell *shell,
@@ -128,7 +128,7 @@ int test_init(                  const struct shell *shell,
         return 0;
     }
 
-    shell_print(shell, "\n==== Starting throughput test ====");
+    shell_print(shell, "\n==== Starting performance test ====");
 
     err = connection_configuration_set(shell, conn_param, phy, data_len);
     if (err) {
@@ -136,7 +136,7 @@ int test_init(                  const struct shell *shell,
     }
 
     /* reset peer metrics */
-    err = bt_throughput_write(&throughput, dummy, 1);
+    err = bt_performance_test_write(&performance_test, dummy, 1);
     if (err) {
         shell_error(shell, "Reset peer metrics failed.");
         return err;
@@ -169,7 +169,7 @@ int test_run(const struct shell *shell,
     stamp = k_uptime_get_32();
 
     while (prog < IMG_SIZE) {
-        err = bt_throughput_write(&throughput, dummy, 244);
+        err = bt_performance_test_write(&performance_test, dummy, 244);
         if (err) {
             shell_error(shell, "GATT write failed (err %d)", err);
             break;
@@ -188,13 +188,13 @@ int test_run(const struct shell *shell,
            data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 
     /* read back char from peer */
-    err = bt_throughput_read(&throughput);
+    err = bt_performance_test_read(&performance_test);
     if (err) {
         shell_error(shell, "GATT read failed (err %d)", err);
         return err;
     }
 
-    k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
+    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
 
     instruction_print();
 
@@ -225,7 +225,7 @@ int test_run_ber_alternating(   const struct shell *shell,
         shell_error(shell, "GATT read failed (err %d)", err);
         return err;
     }
-    
+
     for (int i = 0; i < 256; i++) {
         if (i % 4 > 1) {
             dummy[i] = '1';
@@ -236,9 +236,9 @@ int test_run_ber_alternating(   const struct shell *shell,
 
     /* get cycle stamp */
     stamp = k_uptime_get_32();
-    
+
     while (prog < IMG_SIZE) {
-        err = bt_throughput_write(&throughput, dummy, 256);
+        err = bt_performance_test_write(&performance_test, dummy, 256);
         if (err) {
             shell_error(shell, "GATT write failed (err %d)", err);
             break;
@@ -257,13 +257,13 @@ int test_run_ber_alternating(   const struct shell *shell,
            data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 
     /* read back char from peer */
-    err = bt_throughput_read(&throughput);
+    err = bt_performance_test_read(&performance_test);
     if (err) {
         shell_error(shell, "GATT read failed (err %d)", err);
         return err;
     }
 
-    k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
+    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
 
     instruction_print();
 

@@ -6,13 +6,13 @@
 
 /**
  * @file
- * @defgroup bt_throughput Bluetooth LE GATT Throughput Service API
+ * @defgroup bt_performance_test Bluetooth LE GATT Performance test Service API
  * @{
- * @brief API for the Bluetooth LE GATT Throughput Service.
+ * @brief API for the Bluetooth LE GATT Performance test Service.
  */
 
-#ifndef BT_THROUGHPUT_H_
-#define BT_THROUGHPUT_H_
+#ifndef BT_PERF_TEST_H_
+#define BT_PERF_TEST_H_
 
 #include <bluetooth/uuid.h>
 #include <bluetooth/conn.h>
@@ -22,8 +22,8 @@
 extern "C" {
 #endif
 
-/** @brief Throughput metrics. */
-struct bt_throughput_metrics {
+/** @brief Performance test metrics. */
+struct bt_performance_test_metrics {
 
         /** Number of GATT writes received. */
 	uint32_t write_count;
@@ -35,76 +35,76 @@ struct bt_throughput_metrics {
 	uint32_t write_rate;
 };
 
-/** @brief Throughput callback structure. */
-struct bt_throughput_cb {
+/** @brief Performance test callback structure. */
+struct bt_performance_test_cb {
 	/** @brief Data read callback.
 	 *
 	 * This function is called when data has been read from the
-	 * Throughput Characteristic.
+	 * Performance test Characteristic.
 	 *
-	 * @param[in] met Throughput metrics.
+	 * @param[in] met Performance test metrics.
 	 *
 	 * @retval BT_GATT_ITER_CONTINUE To keep notifications enabled.
 	 * @retval BT_GATT_ITER_STOP To disable notifications.
 	 */
-	uint8_t (*data_read)(const struct bt_throughput_metrics *met);
+	uint8_t (*data_read)(const struct bt_performance_test_metrics *met);
 
 	/** @brief Data received callback.
 	 *
 	 * This function is called when data has been received by the
-	 * Throughput Characteristic.
+	 * Performance test Characteristic.
 	 *
-	 * @param[in] met Throughput metrics.
+	 * @param[in] met Performance test metrics.
 	 */
-	void (*data_received)(const struct bt_throughput_metrics *met);
+	void (*data_received)(const struct bt_performance_test_metrics *met);
 
 	/** @brief Data send callback.
 	 *
 	 * This function is called when data has been sent to the
-	 * Throughput Characteristic.
+	 * Performance test Characteristic.
 	 *
-	 * @param[in] met Throughput metrics.
+	 * @param[in] met Performance test metrics.
 	 */
-	void (*data_send)(const struct bt_throughput_metrics *met);
+	void (*data_send)(const struct bt_performance_test_metrics *met);
 };
 
-/** @brief Throughput structure. */
-struct bt_throughput {
-	/** Throughput Characteristic handle. */
+/** @brief Performance test structure. */
+struct bt_performance_test {
+	/** Performance test Characteristic handle. */
 	uint16_t char_handle;
 
-	/** GATT read parameters for the Throughput Characteristic. */
+	/** GATT read parameters for the Performance test Characteristic. */
 	struct bt_gatt_read_params read_params;
 
-	/** Throughput callback structure. */
-	struct bt_throughput_cb *cb;
+	/** Performance test callback structure. */
+	struct bt_performance_test_cb *cb;
 
 	/** Connection object. */
 	struct bt_conn *conn;
 };
 
-/** @brief Throughput Characteristic UUID. */
-#define BT_UUID_THROUGHPUT_CHAR BT_UUID_DECLARE_16(0x1524)
+/** @brief Performance test Characteristic UUID. */
+#define BT_UUID_PERF_TEST_CHAR BT_UUID_DECLARE_16(0x1524)
 
-#define BT_UUID_THROUGHPUT_VAL \
+#define BT_UUID_PERF_TEST_VAL \
 	BT_UUID_128_ENCODE(0x0483dadd, 0x6c9d, 0x6ca9, 0x5d41, 0x03ad4fff4abb)
 
-/** @brief Throughput Service UUID. */
-#define BT_UUID_THROUGHPUT                                                     \
-	BT_UUID_DECLARE_128(BT_UUID_THROUGHPUT_VAL)
+/** @brief Performance test Service UUID. */
+#define BT_UUID_PERF_TEST                                                     \
+	BT_UUID_DECLARE_128(BT_UUID_PERF_TEST_VAL)
 
-/** @brief Initialize the GATT Throughput Service.
+/** @brief Initialize the GATT Performance test Service.
  *
- *  @param[in] throughput Throughput Service instance.
+ *  @param[in] performance_test Performance test Service instance.
  *  @param[in] cb Callbacks.
  *
  *  @retval 0 If the operation was successful.
  *            Otherwise, a negative error code is returned.
  */
-int bt_throughput_init(struct bt_throughput *throughput,
-		       const struct bt_throughput_cb *cb);
+int bt_performance_test_init(struct bt_performance_test *performance_test,
+		       const struct bt_performance_test_cb *cb);
 
-/** @brief Assign handles to the Throughput Service instance.
+/** @brief Assign handles to the Performance test Service instance.
  *
  * This function should be called when a link with a peer has been established,
  * to associate the link to this instance of the module. This makes it
@@ -113,37 +113,37 @@ int bt_throughput_init(struct bt_throughput *throughput,
  * GATT Discovery Manager.
  *
  * @param[in] dm Discovery object.
- * @param[in,out] throughput Throughput Service instance.
+ * @param[in,out] performance_test Performance test Service instance.
  *
  * @retval 0 If the operation was successful.
  *           Otherwise, a negative error code is returned.
  * @retval (-ENOTSUP) Special error code used when the UUID
  *         of the service does not match the expected UUID.
  */
-int bt_throughput_handles_assign(struct bt_gatt_dm *dm,
-				 struct bt_throughput *throughput);
+int bt_performance_test_handles_assign(struct bt_gatt_dm *dm,
+				 struct bt_performance_test *performance_test);
 
 /** @brief Read data from the server.
  *
  *  @note This procedure is asynchronous.
  *
- *  @param[in] throughput Throughput Service instance.
+ *  @param[in] performance_test Performance test Service instance.
  *
  *  @retval 0 If the operation was successful.
  *            Otherwise, a negative error code is returned.
  */
-int bt_throughput_read(struct bt_throughput *throughput);
+int bt_performance_test_read(struct bt_performance_test *performance_test);
 
 /** @brief Write data to the server.
  *
- *  @param[in] throughput Throughput Service instance.
+ *  @param[in] performance_test Performance test Service instance.
  *  @param[in] data Data.
  *  @param[in] len Data length.
  *
  *  @retval 0 If the operation was successful.
  *            Otherwise, a negative error code is returned.
  */
-int bt_throughput_write(struct bt_throughput *throughput,
+int bt_performance_test_write(struct bt_performance_test *performance_test,
 			const uint8_t *data, uint16_t len);
 
 #ifdef __cplusplus
@@ -154,4 +154,4 @@ int bt_throughput_write(struct bt_throughput *throughput,
  * @}
  */
 
-#endif /* BT_THROUGHPUT_H_ */
+#endif /* BT_PERF_TEST_H_ */

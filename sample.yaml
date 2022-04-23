@@ -1,8 +1,8 @@
 sample:
-  name: BLE throughput
-  description: Bluetooth Low Energy throughput sample
+  name: BLE performance_test
+  description: Bluetooth Low Energy performance test sample
 tests:
-  samples.bluetooth.throughput:
+  samples.bluetooth.performance_test:
     build_only: true
     platform_allow: nrf52dk_nrf52832 nrf52840dk_nrf52840
       nrf5340dk_nrf5340_cpuapp nrf5340dk_nrf5340_cpuapp_ns

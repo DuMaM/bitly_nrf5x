@@ -16,7 +16,7 @@ ENDIF()
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
-zephyr_sources(app_services/throughput.c)
+zephyr_sources(app_services/performance_test.c)
 zephyr_include_directories(include/app_services)
 
 project(NONE)

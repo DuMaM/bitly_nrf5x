@@ -15,25 +15,25 @@
 #include <bluetooth/hci.h>
 #include <bluetooth/uuid.h>
 
-#include <throughput.h>
+#include <performance_test.h>
 
 #include <logging/log.h>
 
-LOG_MODULE_REGISTER(bt_throughput, CONFIG_BT_THROUGHPUT_LOG_LEVEL);
+LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 
-static struct bt_throughput_metrics met;
-static const struct bt_throughput_cb *callbacks;
+static struct bt_performance_test_metrics met;
+static const struct bt_performance_test_cb *callbacks;
 
 static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
 		    struct bt_gatt_read_params *params, const void *data,
 		    uint16_t len)
 {
-	struct bt_throughput_metrics metrics;
+	struct bt_performance_test_metrics metrics;
 
-	memset(&metrics, 0, sizeof(struct bt_throughput_metrics));
+	memset(&metrics, 0, sizeof(struct bt_performance_test_metrics));
 
 	if (data) {
-		len = MIN(len, sizeof(struct bt_throughput_metrics));
+		len = MIN(len, sizeof(struct bt_performance_test_metrics));
 		memcpy(&metrics, data, len);
 
 		if (callbacks && callbacks->data_read) {
@@ -53,7 +53,7 @@ static ssize_t write_callback(struct bt_conn *conn,
 
 	uint64_t delta;
 
-	struct bt_throughput_metrics *met_data = attr->user_data;
+	struct bt_performance_test_metrics *met_data = attr->user_data;
 
 	delta = k_cycle_get_32() - clock_cycles;
 	delta = k_cyc_to_ns_floor64(delta);
@@ -85,9 +85,9 @@ static ssize_t read_callback(struct bt_conn *conn,
 			     const struct bt_gatt_attr *attr, void *buf,
 			     uint16_t len, uint16_t offset)
 {
-	const struct bt_throughput_metrics *metrics = attr->user_data;
+	const struct bt_performance_test_metrics *metrics = attr->user_data;
 
-	len = MIN(sizeof(struct bt_throughput_metrics), len);
+	len = MIN(sizeof(struct bt_performance_test_metrics), len);
 
 	if (callbacks && callbacks->data_send) {
 		callbacks->data_send(metrics);
@@ -100,18 +100,18 @@ static ssize_t read_callback(struct bt_conn *conn,
 }
 
 
-BT_GATT_SERVICE_DEFINE(throughput_svc,
-BT_GATT_PRIMARY_SERVICE(BT_UUID_THROUGHPUT),
-	BT_GATT_CHARACTERISTIC(BT_UUID_THROUGHPUT_CHAR,
+BT_GATT_SERVICE_DEFINE(performance_test_svc,
+BT_GATT_PRIMARY_SERVICE(BT_UUID_PERF_TEST),
+	BT_GATT_CHARACTERISTIC(BT_UUID_PERF_TEST_CHAR,
 		BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
 		BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
 		read_callback, write_callback, &met),
 );
 
-int bt_throughput_init(struct bt_throughput *throughput,
-		       const struct bt_throughput_cb *cb)
+int bt_performance_test_init(struct bt_performance_test *performance_test,
+		       const struct bt_performance_test_cb *cb)
 {
-	if (!throughput || !cb) {
+	if (!performance_test || !cb) {
 		return -EINVAL;
 	}
 
@@ -120,8 +120,8 @@ int bt_throughput_init(struct bt_throughput *throughput,
 	return 0;
 }
 
-int bt_throughput_handles_assign(struct bt_gatt_dm *dm,
-				 struct bt_throughput *throughput)
+int bt_performance_test_handles_assign(struct bt_gatt_dm *dm,
+				 struct bt_performance_test *performance_test)
 {
 	const struct bt_gatt_dm_attr *gatt_service_attr =
 			bt_gatt_dm_service_get(dm);
@@ -130,43 +130,43 @@ int bt_throughput_handles_assign(struct bt_gatt_dm *dm,
 	const struct bt_gatt_dm_attr *gatt_chrc;
 	const struct bt_gatt_dm_attr *gatt_desc;
 
-	if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_THROUGHPUT)) {
+	if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_PERF_TEST)) {
 		return -ENOTSUP;
 	}
 
-	LOG_DBG("Getting handles from Throughput service.");
+	LOG_DBG("Getting handles from performance test service.");
 
-	/* Throughput Characteristic. */
-	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_THROUGHPUT_CHAR);
+	/* Performance test Characteristic. */
+	gatt_chrc = bt_gatt_dm_char_by_uuid(dm, BT_UUID_PERF_TEST_CHAR);
 	if (!gatt_chrc) {
-		LOG_ERR("Missing Throughput characteristic.");
+		LOG_ERR("Missing performance test characteristic.");
 	}
 
 	gatt_desc = bt_gatt_dm_desc_by_uuid(dm, gatt_chrc,
-					    BT_UUID_THROUGHPUT_CHAR);
+					    BT_UUID_PERF_TEST_CHAR);
 	if (!gatt_desc) {
-		LOG_ERR("Missing Throughput characteristic value descriptor");
+		LOG_ERR("Missing performance test characteristic value descriptor");
 		return -EINVAL;
 	}
 
-	LOG_DBG("Found handle for Throughput characteristic.");
-	throughput->char_handle = gatt_desc->handle;
+	LOG_DBG("Found handle for Performance test characteristic.");
+	performance_test->char_handle = gatt_desc->handle;
 
 	/* Assign connection object. */
-	throughput->conn = bt_gatt_dm_conn_get(dm);
+	performance_test->conn = bt_gatt_dm_conn_get(dm);
 	return 0;
 }
 
-int bt_throughput_read(struct bt_throughput *throughput)
+int bt_performance_test_read(struct bt_performance_test *performance_test)
 {
 	int err;
 
-	throughput->read_params.single.handle = throughput->char_handle;
-	throughput->read_params.single.offset = 0;
-	throughput->read_params.handle_count = 1;
-	throughput->read_params.func = read_fn;
+	performance_test->read_params.single.handle = performance_test->char_handle;
+	performance_test->read_params.single.offset = 0;
+	performance_test->read_params.handle_count = 1;
+	performance_test->read_params.func = read_fn;
 
-	err = bt_gatt_read(throughput->conn, &throughput->read_params);
+	err = bt_gatt_read(performance_test->conn, &performance_test->read_params);
 	if (err) {
 		LOG_ERR("Characteristic read failed.");
 	}
@@ -174,10 +174,10 @@ int bt_throughput_read(struct bt_throughput *throughput)
 	return err;
 }
 
-int bt_throughput_write(struct bt_throughput *throughput,
+int bt_performance_test_write(struct bt_performance_test *performance_test,
 			const uint8_t *data, uint16_t len)
 {
-	return bt_gatt_write_without_response(throughput->conn,
-					      throughput->char_handle,
+	return bt_gatt_write_without_response(performance_test->conn,
+					      performance_test->char_handle,
 					      data, len, false);
 }
