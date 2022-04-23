@@ -38,20 +38,22 @@ void app_usb_init(void)
 {
 #ifdef CONFIG_BOARD_PARTICLE_XENON
 
-	const struct device *dev;
-	int ret = 0;
+    const struct device *dev;
+    int ret = 0;
 
-	dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
-	if (!device_is_ready(dev)) {
-		printk("CDC ACM device not ready");
-		return;
-	}
+    dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+    if (!device_is_ready(dev))
+    {
+        printk("CDC ACM device not ready");
+        return;
+    }
 
-	ret = usb_enable(NULL);
-	if (ret != 0) {
-		printk("Failed to enable USB");
-		return;
-	}
+    ret = usb_enable(NULL);
+    if (ret != 0)
+    {
+        printk("Failed to enable USB");
+        return;
+    }
 
 #endif
 }

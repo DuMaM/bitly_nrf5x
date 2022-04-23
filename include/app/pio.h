@@ -3,6 +3,4 @@
 
 void buttons_init(void);
 
-
-
 #endif /* _PIO_H_ */

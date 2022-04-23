@@ -15,11 +15,10 @@ set(DTC_OVERLAY_FILE "particle_xenon.overlay")
 ENDIF()
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(NONE)
 
 zephyr_sources(app_services/performance_test.c)
 zephyr_include_directories(include/app_services)
-
-project(NONE)
 
 FILE(GLOB app_sources src/*.c)
 # NORDIC SDK APP START

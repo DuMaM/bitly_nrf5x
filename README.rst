@@ -1,7 +1,7 @@
 .. _ble_performance_test:
 
 Bluetooth: Performance test
-#####################
+###########################
 
 .. contents::
    :local:
