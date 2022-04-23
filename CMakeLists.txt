@@ -15,6 +15,10 @@ set(DTC_OVERLAY_FILE "particle_xenon.overlay")
 ENDIF()
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+
+zephyr_sources(app_services/throughput.c)
+zephyr_include_directories(include/app_services)
+
 project(NONE)
 
 FILE(GLOB app_sources src/*.c)

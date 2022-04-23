@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2018 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Bluetooth Low Energy"
+
+rsource "app_services/Kconfig.throughput"
+
+endmenu
+
+source "Kconfig.zephyr"
