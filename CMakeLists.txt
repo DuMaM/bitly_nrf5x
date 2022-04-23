@@ -14,18 +14,19 @@ IF(DEFINED CONFIG_BOARD_PARTICLE_XENON)
 set(DTC_OVERLAY_FILE "particle_xenon.overlay")
 ENDIF()
 
+# load zephyr features and configure project
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(NONE)
 
-zephyr_sources(app_services/performance_test.c)
+# SERVICE APP START
+FILE(GLOB app_service_sources src/app_services/*.c)
+zephyr_sources(${app_service_sources})
 zephyr_include_directories(include/app_services)
+# SERVICE APP END
 
-FILE(GLOB app_sources src/*.c)
 # NORDIC SDK APP START
-target_sources(app PRIVATE
-	${app_sources}
-)
-
+FILE(GLOB app_sources src/app/*.c)
+target_sources(app PRIVATE ${app_sources})
 include_directories("include/app")
 # NORDIC SDK APP END
 

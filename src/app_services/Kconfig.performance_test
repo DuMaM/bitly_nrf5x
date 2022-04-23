@@ -5,10 +5,10 @@
 #
 
 config BT_PERF_TEST
-	bool "Performance test service"
-	select BT_NRF_SERVICES
-	help
-	 Enable Nordic GATT performance test BLE service.
+    bool "Performance test service"
+    select BT_NRF_SERVICES
+    help
+     Enable Nordic GATT performance test BLE service.
 
 if BT_PERF_TEST
 

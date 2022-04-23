@@ -6,7 +6,7 @@
 
 menu "Bluetooth Low Energy"
 
-rsource "app_services/Kconfig.performance_test"
+rsource "src/app_services/Kconfig.performance_test"
 
 endmenu
 
