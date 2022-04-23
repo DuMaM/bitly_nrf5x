@@ -23,7 +23,7 @@ target_sources(app PRIVATE
 	${app_sources}
 )
 
-include_directories("include")
+include_directories("include/app")
 # NORDIC SDK APP END
 
 

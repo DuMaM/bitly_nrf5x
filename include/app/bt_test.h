@@ -7,7 +7,7 @@
 #include <bluetooth/gatt.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/uuid.h>
-#include <bluetooth/services/throughput.h>
+#include <throughput.h>
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
 
