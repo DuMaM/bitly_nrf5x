@@ -4,10 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-menu "Bluetooth Low Energy"
-
 rsource "src/app_services/Kconfig.performance_test"
 
-endmenu
 
 source "Kconfig.zephyr"

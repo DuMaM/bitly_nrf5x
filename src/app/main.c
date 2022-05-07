@@ -6,16 +6,14 @@
 
 #include <app_usb.h>
 #include <cmds.h>
-#include <pio.h>
 #include <bt_test.h>
 
 #include <sys/printk.h>
 
 void main(void)
 {
-    bt_init();
     app_usb_init();
-    buttons_init();
+    bt_init();
 
     printk("\n");
     printk("Press button 1 on the master board.\n");

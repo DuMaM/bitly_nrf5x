@@ -235,6 +235,8 @@ static void scan_init(void)
     {
         printk("Filters cannot be turned on\n");
     }
+
+    printk("Scan filters are enabled\n");
 }
 
 void scan_start(void)
@@ -263,7 +265,9 @@ void adv_start(void)
     {
         printk("Failed to start advertiser (%d)\n", err);
         return;
-    } else {
+    }
+    else
+    {
         printk("Start advertiser (%d)\n", ad->type);
     }
 }
@@ -303,7 +307,8 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
 {
     printk("Connection parameters update request received.\n");
-    printk("Minimum interval: %d (%d ms), Maximum interval: %d (%d ms)\n", param->interval_min,
+    printk("Minimum interval: %d (%d ms), Maximum interval: %d (%d ms)\n",
+           param->interval_min,
            (uint32_t)(param->interval_min * UNIT_SCALER),
            param->interval_max,
            (uint32_t)(param->interval_max * UNIT_SCALER));
