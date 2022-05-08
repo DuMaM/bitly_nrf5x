@@ -33,26 +33,26 @@
 #include <nrfx.h>
 #include <usb/usb_device.h>
 #include <sys/printk.h>
+#include <drivers/uart.h>
 
 void app_usb_init(void)
 {
 #ifdef CONFIG_BOARD_PARTICLE_XENON
-
     const struct device *dev;
     int ret = 0;
-
-    dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
-    if (!device_is_ready(dev))
-    {
-        printk("CDC ACM device not ready");
-        return;
-    }
 
     ret = usb_enable(NULL);
     if (ret != 0)
     {
         printk("Failed to enable USB");
         return;
+    }
+
+    dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+    while (!device_is_ready(dev))
+    {
+        k_sleep(K_MSEC(100));
+        printk("CDC ACM device not ready");
     }
 
 #endif
