@@ -44,16 +44,22 @@ void app_usb_init(void)
     ret = usb_enable(NULL);
     if (ret != 0)
     {
-        printk("Failed to enable USB");
+        printk("Failed to enable USB\n");
         return;
     }
 
-    dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
-    while (!device_is_ready(dev))
+    while (!device_is_ready(DEVICE_DT_GET(DT_CHOSEN(zephyr_console))))
     {
         k_sleep(K_MSEC(100));
-        printk("CDC ACM device not ready");
+        printk("CDC ACM device for console is not ready\n");
     }
 
+    while (!device_is_ready(DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart))))
+    {
+        k_sleep(K_MSEC(100));
+        printk("CDC ACM device for shell is not ready\n");
+    }
+
+    printk("Usb CDC ACM successfully enabled\n");
 #endif
 }
