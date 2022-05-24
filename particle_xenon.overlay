@@ -8,10 +8,6 @@ zephyr_udc0: &usbd {
 };
 
 
-&uart0 {
-    status = "disabled";
-};
-
 / {
     chosen {
         zephyr,console = &cdc_acm_0;
