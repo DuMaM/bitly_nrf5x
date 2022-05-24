@@ -1,7 +1,9 @@
-#include <bt_test.h>
 #include <zephyr/types.h>
-#include <cmds.h>
 #include <sys/byteorder.h>
+#include <sys/printk.h>
+
+#include <bt_test.h>
+#include <cmds.h>
 
 K_SEM_DEFINE(performance_test_sem, 0, 1);
 
@@ -443,8 +445,6 @@ void bt_init(void)
 
     printk("Starting Bluetooth Performance test example\n");
 
-    bt_conn_cb_register(&conn_callbacks);
-
     err = bt_enable(NULL);
     if (err)
     {
@@ -452,6 +452,7 @@ void bt_init(void)
         return;
     }
 
+    bt_conn_cb_register(&conn_callbacks);
     printk("Bluetooth initialized\n");
 
     scan_init();

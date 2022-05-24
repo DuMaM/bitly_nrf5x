@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 
-#define INTERVAL_MIN 0x004 /*   4 units,  10 ms */
+#define INTERVAL_MIN 0x140 /* 320 units, 400 ms */
 #define INTERVAL_MAX 0x140 /* 320 units, 400 ms */
 #define CONN_LATENCY 0
 #define UNIT_SCALER 1.25
@@ -19,11 +19,6 @@
 #define MAX_CONN_INTERVAL 3200
 #define SUPERVISION_TIMEOUT 1000
 
-enum CONNECTION_MODE
-{
-    CONNECTION_MASTER,
-    CONNECTION_SLAVE
-};
 typedef struct
 {
     struct bt_le_conn_param *conn_param;
