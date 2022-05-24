@@ -191,7 +191,8 @@ static int print_cmd(const struct shell *shell, size_t argc,
 
 void instruction_print(void)
 {
-    printk("\nType 'config' to change the configuration parameters.\n");
+    printk("\n");
+    printk("Type 'config' to change the configuration parameters.\n");
     printk("You can use the Tab key to autocomplete your input.\n");
     printk("Type 'run' when you are ready to run the test.\n");
 }

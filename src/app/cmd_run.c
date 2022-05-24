@@ -16,7 +16,7 @@ static void get_rssi_power(struct bt_conn *conn)
 
     if (err)
     {
-        printk("No connection handle (err %d)", err);
+        printk("No connection handle (err %d)\n", err);
         return;
     }
 
@@ -28,7 +28,7 @@ static void get_rssi_power(struct bt_conn *conn)
     buf = bt_hci_cmd_create(BT_HCI_OP_READ_RSSI, sizeof(*cp));
     if (!buf)
     {
-        printk("Cannot allocate buffer to get RSSI power");
+        printk("Cannot allocate buffer to get RSSI power\n");
         return;
     }
 
