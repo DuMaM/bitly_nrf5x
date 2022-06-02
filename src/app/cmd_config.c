@@ -143,8 +143,7 @@ static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv
     test_params.conn_param->latency = 0;
     test_params.conn_param->timeout = SUPERVISION_TIMEOUT;
 
-    shell_print(shell, "Connection interval set to: %d",
-                interval);
+    shell_print(shell, "Connection interval set to: %d", interval);
 
     return 0;
 }

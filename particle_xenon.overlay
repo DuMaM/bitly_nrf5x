@@ -7,7 +7,6 @@ zephyr_udc0: &usbd {
     };
 };
 
-
 / {
     chosen {
         zephyr,console = &cdc_acm_0;
