@@ -37,9 +37,9 @@
 
 void app_usb_init(void)
 {
-#ifdef CONFIG_BOARD_PARTICLE_XENON
-    const struct device *dev;
     int ret = 0;
+
+#ifdef CONFIG_BOARD_PARTICLE_XENON
 
     ret = usb_enable(NULL);
     if (ret != 0)
@@ -62,4 +62,5 @@ void app_usb_init(void)
 
     printk("Usb CDC ACM successfully enabled\n");
 #endif
+
 }
