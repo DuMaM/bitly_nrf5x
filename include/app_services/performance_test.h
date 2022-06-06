@@ -34,6 +34,9 @@ extern "C"
 
         /** Transfer speed in bits per second. */
         uint32_t write_rate;
+
+        /** error count if BER is enabled. **/
+        int32_t error_count;
     };
 
     /** @brief Performance test callback structure. */
@@ -70,6 +73,24 @@ extern "C"
         void (*data_send)(const struct bt_performance_test_metrics *met);
     };
 
+    typedef enum {
+        BT_TEST_TYPE_SIMPLE,
+        BT_TEST_TYPE_BER,
+        BT_TEST_TYPE_ANALOG
+    } bt_test_type_t;
+
+    typedef struct bt_ber_test {
+        /** Holds a pattern used to determine ber connection errors */
+        uint8_t bt_test_pattern;
+    } bt_ber_test_t;
+
+    typedef struct bt_test_data_t {
+        bt_test_type_t bt_test_type;
+        union test_data_t {
+            bt_ber_test_t ber;
+        } test_data;
+    } bt_test_data_t;
+
     /** @brief Performance test structure. */
     struct bt_performance_test
     {
@@ -84,6 +105,9 @@ extern "C"
 
         /** Connection object. */
         struct bt_conn *conn;
+
+        /** Test parameters. */
+        bt_test_data_t *data;
     };
 
 /** @brief Performance test Characteristic UUID. */

@@ -2,8 +2,23 @@
 #include <sys/byteorder.h>
 #include <sys/printk.h>
 
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/crypto.h>
+#include <bluetooth/conn.h>
+#include <bluetooth/gatt.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/uuid.h>
+#include <performance_test.h>
+#include <bluetooth/scan.h>
+#include <bluetooth/gatt_dm.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <bt_test.h>
-#include <cmds.h>
+#include <cmd.h>
+
 
 K_SEM_DEFINE(performance_test_sem, 0, 1);
 
@@ -65,8 +80,7 @@ void scan_filter_match(struct bt_scan_device_info *device_info,
 
     bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
-    printk("Filters matched. Address: %s connectable: %d\n",
-           addr, connectable);
+    printk("Filters matched. Address: %s connectable: %d\n", addr, connectable);
 }
 
 void scan_filter_no_match(struct bt_scan_device_info *device_info,

@@ -47,8 +47,11 @@ static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
 }
 
 static ssize_t write_callback(struct bt_conn *conn,
-                              const struct bt_gatt_attr *attr, const void *buf,
-                              uint16_t len, uint16_t offset, uint8_t flags)
+                              const struct bt_gatt_attr *attr,
+                              const void *buf,
+                              uint16_t len,
+                              uint16_t offset,
+                              uint8_t flags)
 {
     static uint32_t clock_cycles;
     static uint32_t kb;
@@ -67,6 +70,7 @@ static ssize_t write_callback(struct bt_conn *conn,
         met_data->write_count = 0;
         met_data->write_len = 0;
         met_data->write_rate = 0;
+        met_data->error_count = -1;
         clock_cycles = k_cycle_get_32();
     }
     else

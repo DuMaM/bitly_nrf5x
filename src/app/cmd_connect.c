@@ -1,4 +1,4 @@
-#include <cmds.h>
+#include <cmd.h>
 #include <bt_test.h>
 
 // add connect command

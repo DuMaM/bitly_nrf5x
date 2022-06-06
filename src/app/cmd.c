@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <cmds.h>
+#include <cmd.h>
 #include <bt_test.h>
 
 int default_cmd(const struct shell *shell, size_t argc, char **argv)
@@ -78,4 +78,12 @@ int8_t atob(const char *buffer)
     }
 
     return -1;
+}
+
+void instruction_print(void)
+{
+    printk("\n");
+    printk("Type 'config' to change the configuration parameters.\n");
+    printk("You can use the Tab key to autocomplete your input.\n");
+    printk("Type 'run' when you are ready to run the test.\n");
 }

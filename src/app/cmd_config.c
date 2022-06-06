@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <cmds.h>
+#include <cmd.h>
 #include <bt_test.h>
 
 test_params_t test_params = {
@@ -188,13 +188,6 @@ static int print_cmd(const struct shell *shell, size_t argc,
     return 0;
 }
 
-void instruction_print(void)
-{
-    printk("\n");
-    printk("Type 'config' to change the configuration parameters.\n");
-    printk("You can use the Tab key to autocomplete your input.\n");
-    printk("Type 'run' when you are ready to run the test.\n");
-}
 
 SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
                                SHELL_CMD(1M, NULL, "Set preferred PHY to 1Mbps", cmd_phy_1m),

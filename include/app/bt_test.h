@@ -1,16 +1,6 @@
 #ifndef _BT_TEST_H_
 #define _BT_TEST_H_
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/crypto.h>
-#include <bluetooth/conn.h>
-#include <bluetooth/gatt.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/uuid.h>
-#include <performance_test.h>
-#include <bluetooth/scan.h>
-#include <bluetooth/gatt_dm.h>
-
 #include <shell/shell.h>
 
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME

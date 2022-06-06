@@ -1,13 +1,24 @@
-#include <cmds.h>
-#include <bt_test.h>
-#include "img_file.h"
 #include <sys/byteorder.h>
 
-extern test_params_t test_params;
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/crypto.h>
+#include <bluetooth/conn.h>
+#include <bluetooth/gatt.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/uuid.h>
+#include <performance_test.h>
+#include <bluetooth/scan.h>
+#include <bluetooth/gatt_dm.h>
+
+#include <cmd.h>
+#include <cmd_run.h>
+#include <bt_test.h>
+
 extern struct bt_conn *default_conn;
-/* a dummy data buffer */
-static uint8_t dummy[256];
-const static int dummy_size = sizeof(dummy) / sizeof(dummy[0]);
+/* a test_data_buffer data buffer */
+uint8_t test_data_buffer[240];
+const uint16_t test_data_buffer_size = sizeof(test_data_buffer) / sizeof(test_data_buffer[0]);
+
 
 static void get_rssi_power(struct bt_conn *conn)
 {
@@ -65,10 +76,10 @@ static void get_tx_power(struct bt_conn *conn)
 
 static uint8_t performance_test_read(const struct bt_performance_test_metrics *met)
 {
-    printk("[peer] received %u bytes (%u KB)"
-           " in %u GATT writes at %u bps\n",
+    printk("[peer] received %u bytes (%u KB) in %u GATT writes at %u bps\n",
            met->write_len, met->write_len / 1024, met->write_count,
            met->write_rate);
+
 
     k_sem_give(&performance_test_sem);
 
@@ -78,31 +89,35 @@ static uint8_t performance_test_read(const struct bt_performance_test_metrics *m
 static void performance_test_received(const struct bt_performance_test_metrics *met)
 {
     static uint32_t kb = 0;
-    static bool enter = true;
+    static uint16_t kb_line = 0;
 
     /* init case for new package sent */
     if (met->write_len == 0)
     {
         kb = 0;
+        kb_line = 0;
         printk("\n");
-        enter = false;
         return;
     }
 
-    if ((met->write_len / 1024) != kb)
+    /* show progress of data transfer */
+    uint32_t kb_tmp = met->write_len / 1024;
+    if (kb_tmp != kb)
     {
-        kb = (met->write_len / 1024);
+        kb = kb_tmp;
         printk("=");
-        enter = true;
     }
 
-    /* add formatting */
-    if (!(kb % 64) && enter)
+    /*
+     * classic terminal have line width 80 characters long
+     * so we want to add formatting so it will be easier to read
+     */
+    uint16_t kb_line_tmp = kb / 64;
+    if (kb_line != kb_line_tmp)
     {
-        printk("\n");
         get_rssi_power(default_conn);
         get_tx_power(default_conn);
-        enter = false;
+        printk("\n");
     }
 }
 
@@ -149,7 +164,7 @@ int test_init(const struct shell *shell,
     }
 
     /* reset peer metrics */
-    err = bt_performance_test_write(&performance_test, dummy, 1);
+    err = bt_performance_test_write(&performance_test, test_data_buffer, 1);
     if (err)
     {
         shell_error(shell, "Reset peer metrics failed.");
@@ -161,166 +176,9 @@ int test_init(const struct shell *shell,
     return 0;
 }
 
-int test_run(const struct shell *shell,
-             const struct bt_le_conn_param *conn_param,
-             const struct bt_conn_le_phy_param *phy,
-             const struct bt_conn_le_data_len_param *data_len)
-{
-    int64_t stamp;
-    int64_t delta;
-    uint32_t prog = 0;
-    uint32_t data = 0;
-    int err;
-
-    err = test_init(shell, conn_param, phy, data_len);
-    if (err)
-    {
-        shell_error(shell, "GATT read failed (err %d)", err);
-        return err;
-    }
-
-    /* get cycle stamp */
-    stamp = k_uptime_get_32();
-    while (prog < IMG_SIZE)
-    {
-        err = bt_performance_test_write(&performance_test, dummy, dummy_size);
-        if (err)
-        {
-            shell_error(shell, "GATT write failed (err %d)", err);
-            break;
-        }
-
-        /* print graphics */
-        printk("%c", img[prog / IMG_X][prog % IMG_X]);
-        data += dummy_size;
-        prog++;
-    }
-
-    delta = k_uptime_delta(&stamp);
-
-    printk("\nDone\n");
-    printk("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps\n",
-           data, data / 1024, delta, ((uint64_t)data * 8 / delta));
-
-    /* read back char from peer */
-    err = bt_performance_test_read(&performance_test);
-    if (err)
-    {
-        shell_error(shell, "GATT read failed (err %d)", err);
-        return err;
-    }
-
-    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
-
-    instruction_print();
-
-    return 0;
-}
-
-static int test_run_cmd(const struct shell *shell, size_t argc,
-                        char **argv)
-{
-    return test_run(shell, test_params.conn_param, test_params.phy,
-                    test_params.data_len);
-}
-
-int test_run_ber_alternating(const struct shell *shell,
-                             const uint16_t period_sec,
-                             const struct bt_le_conn_param *conn_param,
-                             const struct bt_conn_le_phy_param *phy,
-                             const struct bt_conn_le_data_len_param *data_len,
-                             const uint8_t pattern)
-{
-    int64_t stamp = 0;
-    int64_t delta = 0;
-    int64_t data = 0;
-    uint16_t ber_cnt = 0;
-    int err;
-
-    err = test_init(shell, conn_param, phy, data_len);
-    if (err)
-    {
-        shell_error(shell, "GATT read failed (err %d)", err);
-        return err;
-    }
-
-    for (int i = 0; i < 256; i++)
-    {
-        dummy[i] = pattern;
-    }
-
-    /* get cycle stamp */
-    stamp = k_uptime_get_32();
-
-    while (delta < period_sec)
-    {
-        err = bt_performance_test_write(&performance_test, dummy, dummy_size);
-        if (err)
-        {
-            shell_error(shell, "GATT write failed (err %d)", err);
-            break;
-        }
-
-        /* print graphics */
-        printk("%11001100...\n");
-        delta = k_uptime_delta(&stamp);
-        data += dummy_size;
-    }
-
-    printk("\nDone\n");
-    printk("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps\n",
-           data, data / 1024, delta, ((uint64_t)data * 8 / delta));
-
-    /* read back char from peer */
-    err = bt_performance_test_read(&performance_test);
-    if (err)
-    {
-        shell_error(shell, "GATT read failed (err %d)", err);
-        return err;
-    }
-
-    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
-
-    return 0;
-}
-
-static int test_run_ber_alternating_cmd(const struct shell *shell, size_t argc, char **argv)
-{
-
-#define MAX_TEST_SIZE 1800
-    uint16_t period_sec;
-
-    if (argc <= 1)
-    {
-        shell_help(shell);
-        return SHELL_CMD_HELP_PRINTED;
-    }
-
-    if (argc > 2)
-    {
-        shell_error(shell, "%s: bad parameters count", argv[0]);
-        return -EINVAL;
-    }
-
-    period_sec = strtol(argv[1], NULL, 10);
-
-    if (period_sec > MAX_TEST_SIZE)
-    {
-        shell_error(shell, "%s: Invalid setting: %d", argv[0], period_sec);
-        shell_error(shell, "Test time must be lower then: %d", MAX_TEST_SIZE);
-        return -EINVAL;
-    }
-    shell_print(shell, "Test time set to: %d min", period_sec / 60);
-
-    return test_run_ber_alternating(shell, period_sec,
-                                    test_params.conn_param,
-                                    test_params.phy,
-                                    test_params.data_len,
-                                    0x33);
-}
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_bt_test,
-                               SHELL_CMD(ber_alternating, NULL, "Tests ber signal with pattern |11|00|11|00", test_run_ber_alternating_cmd),
+                               SHELL_CMD(ber_alt, NULL, "Tests ber signal with pattern |11|00|11|00", test_run_ber_alternating_cmd),
                                SHELL_CMD(ber_oppsed, NULL, "Tests ber signal with pattern |10|10|10|10", default_cmd),
                                SHELL_CMD(analog_sim, NULL, "Tests with simulated ECC signal", default_cmd),
                                SHELL_CMD(analog, NULL, "Tests with ECC signal", default_cmd),

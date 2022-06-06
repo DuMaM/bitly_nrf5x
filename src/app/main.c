@@ -5,7 +5,7 @@
  */
 
 #include <app_usb.h>
-#include <cmds.h>
+#include <cmd.h>
 #include <bt_test.h>
 
 #include <sys/printk.h>
