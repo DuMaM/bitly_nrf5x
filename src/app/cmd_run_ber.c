@@ -16,12 +16,27 @@
 
 #include <bt_test.h>
 
+#define MAX_TEST_SIZE (1800 * 1000)
+
 extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
+
+char *bitString(uint8_t n, char* out_bin_string)
+{
+    int i;
+    for (i = 7; i >= 0; i--)
+    {
+        out_bin_string[i] = (n & 1) + '0';
+        n >>= 1;
+    }
+    out_bin_string[8] = '\0';
+    return out_bin_string;
+}
+
 int test_run_ber(const struct shell *shell,
-                             const uint16_t period_sec,
+                             const uint16_t period_ms,
                              const struct bt_le_conn_param *conn_param,
                              const struct bt_conn_le_phy_param *phy,
                              const struct bt_conn_le_data_len_param *data_len,
@@ -30,6 +45,8 @@ int test_run_ber(const struct shell *shell,
     int64_t stamp = 0;
     int64_t delta = 0;
     int64_t data = 0;
+    uint64_t prog = 0;
+    char pattern_string[7];
     int err;
 
     err = test_init(shell, conn_param, phy, data_len);
@@ -44,10 +61,12 @@ int test_run_ber(const struct shell *shell,
         test_data_buffer[i] = pattern;
     }
 
+    bitString(pattern, pattern_string);
+
     /* get cycle stamp */
     stamp = k_uptime_get_32();
 
-    while (delta < period_sec)
+    while (delta < period_ms)
     {
         err = bt_performance_test_write(&performance_test, test_data_buffer, test_data_buffer_size);
         if (err)
@@ -56,14 +75,15 @@ int test_run_ber(const struct shell *shell,
             break;
         }
 
-        /* print graphics */
-        printk("Sending %d: 11001100 ...\n", test_data_buffer_size);
-        delta = k_uptime_delta(&stamp);
+        /* print data */
+        prog++;
+        shell_print(shell, "(%"PRIu64")Sending %"PRIu64": %s ...", prog, delta, pattern_string);
         data += test_data_buffer_size;
+        delta = k_uptime_get_32() - stamp;
     }
 
-    printk("\nDone\n");
-    printk("[local] sent %"PRIi64" bytes (%"PRIi64" KB) in %"PRIi64" ms at %"PRIu64" kbps\n", data, data / 1024, delta, ((uint64_t)data * 8 / delta));
+    shell_print(shell, "\nDone");
+    shell_print(shell, "[local] sent %"PRIi64" bytes (%"PRIi64" KB) in %"PRIi64" ms at %"PRIu64" kbps", data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 
     /* read back char from peer */
     err = bt_performance_test_read(&performance_test);
@@ -81,7 +101,7 @@ int test_run_ber(const struct shell *shell,
 int test_run_ber_alternating_cmd(const struct shell *shell, size_t argc, char **argv)
 {
 
-    uint16_t period_sec = 0;
+    uint16_t period_ms = 0;
 
     if (argc <= 1)
     {
@@ -95,21 +115,56 @@ int test_run_ber_alternating_cmd(const struct shell *shell, size_t argc, char **
         return -EINVAL;
     }
 
-    period_sec = strtol(argv[1], NULL, 10);
+    period_ms = strtol(argv[1], NULL, 10) * 1000;
 
-#define MAX_TEST_SIZE 1800
-    if (period_sec > MAX_TEST_SIZE)
+    if (period_ms > MAX_TEST_SIZE)
     {
-        shell_error(shell, "%s: Invalid setting: %d", argv[0], period_sec);
+        shell_error(shell, "%s: Invalid setting: %d", argv[0], period_ms);
         shell_error(shell, "Test time must be lower then: %d", MAX_TEST_SIZE);
         return -EINVAL;
     }
-    shell_print(shell, "Test time set to: %d min", period_sec / 60);
+    shell_print(shell, "Test time set to: %d min", period_ms / 60 / 1000);
 
     return test_run_ber(shell,
-                        period_sec,
+                        period_ms,
                         test_params.conn_param,
                         test_params.phy,
                         test_params.data_len,
                         0x33);
+}
+
+
+int test_run_ber_oppsed_cmd(const struct shell *shell, size_t argc, char **argv)
+{
+
+    uint16_t period_ms = 0;
+
+    if (argc <= 1)
+    {
+        shell_help(shell);
+        return SHELL_CMD_HELP_PRINTED;
+    }
+
+    if (argc > 2)
+    {
+        shell_error(shell, "%s: bad parameters count", argv[0]);
+        return -EINVAL;
+    }
+
+    period_ms = strtol(argv[1], NULL, 10) * 1000;
+
+    if (period_ms > MAX_TEST_SIZE)
+    {
+        shell_error(shell, "%s: Invalid setting: %d", argv[0], period_ms);
+        shell_error(shell, "Test time must be lower then: %d", MAX_TEST_SIZE);
+        return -EINVAL;
+    }
+    shell_print(shell, "Test time set to: %d min", period_ms / 60 / 1000);
+
+    return test_run_ber(shell,
+                        period_ms,
+                        test_params.conn_param,
+                        test_params.phy,
+                        test_params.data_len,
+                        0xAA);
 }

@@ -47,9 +47,8 @@ int test_run(const struct shell *shell,
 
     delta = k_uptime_delta(&stamp);
 
-    printk("\nDone\n");
-    printk("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps\n",
-           data, data / 1024, delta, ((uint64_t)data * 8 / delta));
+    shell_print(shell, "\nDone\n");
+    shell_print(shell, "[local] sent %u bytes (%u KB) in %lld ms at %llu kbps\n", data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 
     /* read back char from peer */
     err = bt_performance_test_read(&performance_test);
