@@ -180,7 +180,7 @@ int test_init(const struct shell *shell,
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_bt_test,
                                SHELL_CMD(ber_alt, NULL, "Tests ber signal with pattern |11|00|11|00", test_run_ber_alternating_cmd),
                                SHELL_CMD(ber_oppsed, NULL, "Tests ber signal with pattern |10|10|10|10", test_run_ber_oppsed_cmd),
-                               SHELL_CMD(analog_sim, NULL, "Tests with simulated ECC signal", default_cmd),
+                               SHELL_CMD(analog_sim, NULL, "Tests with simulated ECC signal", sim_run_cmd),
                                SHELL_CMD(analog, NULL, "Tests with ECC signal", default_cmd),
                                SHELL_CMD(test_picture, NULL, "Tests transition with example picture", test_run_cmd),
                                SHELL_SUBCMD_SET_END);
