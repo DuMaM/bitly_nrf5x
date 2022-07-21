@@ -1,4 +1,7 @@
 #include <moving_avg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // based on
 // https://nestedsoftware.com/2018/03/20/calculating-a-moving-average-on-streaming-data-5a7k.22879.html
@@ -9,5 +12,3 @@ void dm_update(dynamic_mean_t* dm, uint64_t new_value) {
     uint64_t new_mean = dm->mean + differential;
     dm->mean = new_mean;
 }
-
-

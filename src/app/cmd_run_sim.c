@@ -10,6 +10,7 @@ extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
+
 int sim_run(const struct shell *shell,
              const struct bt_le_conn_param *conn_param,
              const struct bt_conn_le_phy_param *phy,
@@ -30,23 +31,27 @@ int sim_run(const struct shell *shell,
 
     /* get cycle stamp */
     stamp = k_uptime_get_32();
+    int i = 0;
     while (prog < 1000*12)
     {
-        for (int i = 0; i < test_data_buffer_size; i++)
+        for (i = 0; i < test_data_buffer_size; i++)
         {
-            test_data_buffer[i] = sim_data[prog][i];
+            const float val =  **(sim_data + prog++);
+            printk("%f ", val);
+
+            if (prog % 12 == 0) {
+                printk("\n");
+            }
+            test_data_buffer[i] = val;
         }
+
         err = bt_performance_test_write(&performance_test, test_data_buffer, test_data_buffer_size);
         if (err)
         {
             shell_error(shell, "GATT write failed (err %d)", err);
             break;
         }
-
-        /* print graphics */
-        printk("%f", sim_data+prog);
-        data += test_data_buffer_size;
-        prog++;
+        data += i;
     }
 
     delta = k_uptime_delta(&stamp);
