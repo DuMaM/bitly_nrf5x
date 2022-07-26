@@ -21,7 +21,7 @@ int test_run(const struct shell *shell,
     uint32_t data = 0;
     int err;
 
-    err = test_init(shell, conn_param, phy, data_len);
+    err = test_init(shell, conn_param, phy, data_len, BT_TEST_TYPE_SIMPLE);
     if (err)
     {
         shell_error(shell, "GATT read failed (err %d)", err);

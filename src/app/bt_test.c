@@ -19,20 +19,19 @@
 #include <bt_test.h>
 #include <cmd.h>
 
-
 K_SEM_DEFINE(performance_test_sem, 0, 1);
 
 static volatile bool data_length_req;
 static volatile bool test_ready;
-struct bt_conn *default_conn;
-static struct bt_uuid *uuid128 = BT_UUID_PERF_TEST;
+struct bt_conn* default_conn;
+static struct bt_uuid* uuid128 = BT_UUID_PERF_TEST;
 static struct bt_gatt_exchange_params exchange_params;
-static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, 0, 400);
+static struct bt_le_conn_param* conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, 0, 400);
 
 struct bt_performance_test performance_test;
 extern const struct bt_performance_test_cb performance_test_cb;
 
-struct bt_conn *getSettings(void)
+struct bt_conn* getSettings(void)
 {
     return default_conn;
 }
@@ -53,7 +52,7 @@ static const struct bt_data sd[] = {
     BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
 };
 
-static const char *phy2str(uint8_t phy)
+static const char* phy2str(uint8_t phy)
 {
     switch (phy)
     {
@@ -70,11 +69,11 @@ static const char *phy2str(uint8_t phy)
     }
 }
 
-// ##### SCAN
+// ##### SCAN (Master)
 
-void scan_filter_match(struct bt_scan_device_info *device_info,
-                       struct bt_scan_filter_match *filter_match,
-                       bool connectable)
+void scan_filter_match(struct bt_scan_device_info* device_info,
+    struct bt_scan_filter_match* filter_match,
+    bool connectable)
 {
     char addr[BT_ADDR_LE_STR_LEN];
 
@@ -83,31 +82,92 @@ void scan_filter_match(struct bt_scan_device_info *device_info,
     printk("Filters matched. Address: %s connectable: %d\n", addr, connectable);
 }
 
-void scan_filter_no_match(struct bt_scan_device_info *device_info,
-                          bool connectable)
+void scan_filter_no_match(struct bt_scan_device_info* device_info,
+    bool connectable)
 {
     char addr[BT_ADDR_LE_STR_LEN];
 
     bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
     printk("Filter not match. Address: %s connectable: %d\n",
-           addr, connectable);
+        addr, connectable);
 }
 
-void scan_connecting_error(struct bt_scan_device_info *device_info)
+void scan_connecting_error(struct bt_scan_device_info* device_info)
 {
     printk("Connecting failed\n");
 }
 
 BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match,
-                scan_connecting_error, NULL);
+    scan_connecting_error, NULL);
 
-// ##### End
 
-static void exchange_func(struct bt_conn *conn, uint8_t att_err,
-                          struct bt_gatt_exchange_params *params)
+static void scan_init(void)
 {
-    struct bt_conn_info info = {0};
+    int err;
+    struct bt_le_scan_param scan_param = {
+        .type = BT_LE_SCAN_TYPE_PASSIVE,
+        .options = BT_LE_SCAN_OPT_FILTER_DUPLICATE,
+        .interval = 0x0010,
+        .window = 0x0010,
+    };
+
+    struct bt_scan_init_param scan_init = {
+        .connect_if_match = 1,
+        .scan_param = &scan_param,
+        .conn_param = conn_param };
+
+    bt_scan_init(&scan_init);
+    bt_scan_cb_register(&scan_cb);
+
+    err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, uuid128);
+    if (err)
+    {
+        printk("Scanning filters cannot be set\n");
+
+        return;
+    }
+
+    err = bt_scan_filter_enable(BT_SCAN_UUID_FILTER, false);
+    if (err)
+    {
+        printk("Filters cannot be turned on\n");
+    }
+
+    printk("Scan filters are enabled\n");
+}
+
+void scan_start(void)
+{
+    // think of bt_le_scan_start
+    int err = bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
+    if (err)
+    {
+        printk("Starting scanning failed (err %d)\n", err);
+        return;
+    }
+}
+
+/**
+ * @brief Determine maximum transmission unit (MTU) for a connection.
+ *
+ * @param conn - handle for the connection
+ * @param att_err - error code for the ATT operation
+ * @param params - parameters for the ATT operation
+ *
+ * @details This function is called by master to init the MTU exchange.
+ *          The function will determine the maximum transmission unit (MTU).
+ *          This procedure is used only whenever either the client or the server (or both)
+ *          can handle MTUs longer than the default ATT_MTU of 23 bytes (see “Logical Link Control and Adaptation Protocol (L2CAP)”)
+ *          and wants to inform the other end that it can send packets longer than the default values that the specification requires.
+ *          L2CAP will then fragment these bigger packets into small Link Layers packets and recombine them from small Link Layers packets.
+ *
+ * @return * determine
+ */
+static void exchange_func(struct bt_conn* conn, uint8_t att_err,
+    struct bt_gatt_exchange_params* params)
+{
+    struct bt_conn_info info = { 0 };
     int err;
 
     printk("MTU exchange %s\n", att_err == 0 ? "successful" : "failed");
@@ -126,11 +186,12 @@ static void exchange_func(struct bt_conn *conn, uint8_t att_err,
     }
 }
 
-static void discovery_complete(struct bt_gatt_dm *dm,
-                               void *context)
+// scan callbacks
+static void discovery_complete(struct bt_gatt_dm* dm,
+    void* context)
 {
     int err;
-    struct bt_performance_test *performance_test = context;
+    struct bt_performance_test* performance_test = context;
 
     printk("Service discovery completed\n");
 
@@ -151,15 +212,15 @@ static void discovery_complete(struct bt_gatt_dm *dm,
     }
 }
 
-static void discovery_service_not_found(struct bt_conn *conn,
-                                        void *context)
+static void discovery_service_not_found(struct bt_conn* conn,
+    void* context)
 {
     printk("Service not found\n");
 }
 
-static void discovery_error(struct bt_conn *conn,
-                            int err,
-                            void *context)
+static void discovery_error(struct bt_conn* conn,
+    int err,
+    void* context)
 {
     printk("Error while discovering GATT database: (%d)\n", err);
 }
@@ -170,9 +231,12 @@ struct bt_gatt_dm_cb discovery_cb = {
     .error_found = discovery_error,
 };
 
-static void connected(struct bt_conn *conn, uint8_t hci_err)
+// ##### End
+
+
+static void connected(struct bt_conn* conn, uint8_t hci_err)
 {
-    struct bt_conn_info info = {0};
+    struct bt_conn_info info = { 0 };
     int err;
 
     if (hci_err)
@@ -209,9 +273,9 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
     if (info.role == BT_CONN_ROLE_CENTRAL)
     {
         err = bt_gatt_dm_start(default_conn,
-                               BT_UUID_PERF_TEST,
-                               &discovery_cb,
-                               &performance_test);
+            BT_UUID_PERF_TEST,
+            &discovery_cb,
+            &performance_test);
 
         if (err)
         {
@@ -220,63 +284,18 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
     }
 }
 
-static void scan_init(void)
-{
-    int err;
-    struct bt_le_scan_param scan_param = {
-        .type = BT_LE_SCAN_TYPE_PASSIVE,
-        .options = BT_LE_SCAN_OPT_FILTER_DUPLICATE,
-        .interval = 0x0010,
-        .window = 0x0010,
-    };
-
-    struct bt_scan_init_param scan_init = {
-        .connect_if_match = 1,
-        .scan_param = &scan_param,
-        .conn_param = conn_param};
-
-    bt_scan_init(&scan_init);
-    bt_scan_cb_register(&scan_cb);
-
-    err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, uuid128);
-    if (err)
-    {
-        printk("Scanning filters cannot be set\n");
-
-        return;
-    }
-
-    err = bt_scan_filter_enable(BT_SCAN_UUID_FILTER, false);
-    if (err)
-    {
-        printk("Filters cannot be turned on\n");
-    }
-
-    printk("Scan filters are enabled\n");
-}
-
-void scan_start(void)
-{
-    // think of bt_le_scan_start
-    int err = bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
-    if (err)
-    {
-        printk("Starting scanning failed (err %d)\n", err);
-        return;
-    }
-}
 
 void adv_start(void)
 {
-    struct bt_le_adv_param *adv_param =
+    struct bt_le_adv_param* adv_param =
         BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
-                        BT_GAP_ADV_FAST_INT_MIN_2,
-                        BT_GAP_ADV_FAST_INT_MAX_2,
-                        NULL);
+            BT_GAP_ADV_FAST_INT_MIN_2,
+            BT_GAP_ADV_FAST_INT_MAX_2,
+            NULL);
     int err;
 
     err = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd,
-                          ARRAY_SIZE(sd));
+        ARRAY_SIZE(sd));
     if (err)
     {
         printk("Failed to start advertiser (%d)\n", err);
@@ -288,9 +307,9 @@ void adv_start(void)
     }
 }
 
-static void disconnected(struct bt_conn *conn, uint8_t reason)
+static void disconnected(struct bt_conn* conn, uint8_t reason)
 {
-    struct bt_conn_info info = {0};
+    struct bt_conn_info info = { 0 };
     int err;
 
     printk("Disconnected (reason 0x%02x)\n", reason);
@@ -320,39 +339,39 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
     }
 }
 
-static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
+static bool le_param_req(struct bt_conn* conn, struct bt_le_conn_param* param)
 {
     printk("Connection parameters update request received.\n");
     printk("Minimum interval: %d (%d ms), Maximum interval: %d (%d ms)\n",
-           param->interval_min,
-           (uint32_t)(param->interval_min * UNIT_SCALER),
-           param->interval_max,
-           (uint32_t)(param->interval_max * UNIT_SCALER));
+        param->interval_min,
+        (uint32_t)(param->interval_min * UNIT_SCALER),
+        param->interval_max,
+        (uint32_t)(param->interval_max * UNIT_SCALER));
     printk("Latency: %d, Timeout: %d\n", param->latency, param->timeout);
 
     return true;
 }
 
-static void le_param_updated(struct bt_conn *conn, uint16_t interval,
-                             uint16_t latency, uint16_t timeout)
+static void le_param_updated(struct bt_conn* conn, uint16_t interval,
+    uint16_t latency, uint16_t timeout)
 {
     printk("Connection parameters updated.\n"
-           " interval: %d (%d ms), latency: %d, timeout: %d\n",
-           interval, (uint32_t)(interval * UNIT_SCALER), latency, timeout);
+        " interval: %d (%d ms), latency: %d, timeout: %d\n",
+        interval, (uint32_t)(interval * UNIT_SCALER), latency, timeout);
 
     k_sem_give(&performance_test_sem);
 }
 
-static void le_phy_updated(struct bt_conn *conn,
-                           struct bt_conn_le_phy_info *param)
+static void le_phy_updated(struct bt_conn* conn,
+    struct bt_conn_le_phy_info* param)
 {
     printk("LE PHY updated: TX PHY %s, RX PHY %s\n", phy2str(param->tx_phy), phy2str(param->rx_phy));
 
     k_sem_give(&performance_test_sem);
 }
 
-static void le_data_length_updated(struct bt_conn *conn,
-                                   struct bt_conn_le_data_len_info *info)
+static void le_data_length_updated(struct bt_conn* conn,
+    struct bt_conn_le_data_len_info* info)
 {
     if (!data_length_req)
     {
@@ -360,21 +379,21 @@ static void le_data_length_updated(struct bt_conn *conn,
     }
 
     printk("LE data len updated: TX (len: %d time: %d)"
-           " RX (len: %d time: %d)\n",
-           info->tx_max_len,
-           info->tx_max_time, info->rx_max_len, info->rx_max_time);
+        " RX (len: %d time: %d)\n",
+        info->tx_max_len,
+        info->tx_max_time, info->rx_max_len, info->rx_max_time);
 
     data_length_req = false;
     k_sem_give(&performance_test_sem);
 }
 
-int connection_configuration_set(const struct shell *shell,
-                                 const struct bt_le_conn_param *conn_param,
-                                 const struct bt_conn_le_phy_param *phy,
-                                 const struct bt_conn_le_data_len_param *data_len)
+int connection_configuration_set(const struct shell* shell,
+    const struct bt_le_conn_param* conn_param,
+    const struct bt_conn_le_phy_param* phy,
+    const struct bt_conn_le_data_len_param* data_len)
 {
     int err;
-    struct bt_conn_info info = {0};
+    struct bt_conn_info info = { 0 };
 
     err = bt_conn_get_info(default_conn, &info);
     if (err)
@@ -411,7 +430,7 @@ int connection_configuration_set(const struct shell *shell,
         if (err)
         {
             shell_error(shell, "LE data length update failed: %d",
-                        err);
+                err);
             return err;
         }
 
@@ -455,7 +474,7 @@ void bt_init(void)
         .le_param_req = le_param_req,
         .le_param_updated = le_param_updated,
         .le_phy_updated = le_phy_updated,
-        .le_data_len_updated = le_data_length_updated};
+        .le_data_len_updated = le_data_length_updated };
 
     printk("Starting Bluetooth Performance test example\n");
 
