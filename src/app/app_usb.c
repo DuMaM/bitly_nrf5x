@@ -37,9 +37,9 @@
 
 void app_usb_init(void)
 {
+#ifdef CONFIG_BOARD_PARTICLE_XENON
     int ret = 0;
 
-#ifdef CONFIG_BOARD_PARTICLE_XENON
 
     ret = usb_enable(NULL);
     if (ret != 0)
