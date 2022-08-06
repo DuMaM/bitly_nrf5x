@@ -255,7 +255,6 @@ struct bt_gatt_dm_cb discovery_cb = {
 
 // ##### End
 
-
 static void connected(struct bt_conn* conn, uint8_t hci_err)
 {
     struct bt_conn_info info = { 0 };
@@ -327,16 +326,17 @@ static void disconnected(struct bt_conn* conn, uint8_t reason)
         printk("Failed to get connection info (%d)\n", err);
         return;
     }
+}
 
-    /* Re-connect using same roles */
-    if (info.role == BT_CONN_ROLE_CENTRAL)
+void restore_state() {
+    test_ready = false;
+    if (default_conn)
     {
-        scan_start();
+        bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+        bt_conn_unref(default_conn);
+        default_conn = NULL;
     }
-    else
-    {
-        adv_start();
-    }
+    return;
 }
 
 static bool le_param_req(struct bt_conn* conn, struct bt_le_conn_param* param)

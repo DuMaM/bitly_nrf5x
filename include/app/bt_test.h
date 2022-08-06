@@ -10,7 +10,7 @@
 void bt_init(void);
 struct bt_conn *getSettings(void);
 volatile bool isTestReady(void);
-
+void restore_state();
 void scan_start(void);
 void adv_start(void);
 
