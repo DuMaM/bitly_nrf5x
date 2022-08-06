@@ -148,6 +148,28 @@ void scan_start(void)
     }
 }
 
+void adv_start(void)
+{
+    struct bt_le_adv_param* adv_param =
+        BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
+            BT_GAP_ADV_FAST_INT_MIN_2,
+            BT_GAP_ADV_FAST_INT_MAX_2,
+            NULL);
+    int err;
+
+    err = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd,
+        ARRAY_SIZE(sd));
+    if (err)
+    {
+        printk("Failed to start advertiser (%d)\n", err);
+        return;
+    }
+    else
+    {
+        printk("Start advertiser (%d)\n", ad->type);
+    }
+}
+
 /**
  * @brief Determine maximum transmission unit (MTU) for a connection.
  *
@@ -284,28 +306,6 @@ static void connected(struct bt_conn* conn, uint8_t hci_err)
     }
 }
 
-
-void adv_start(void)
-{
-    struct bt_le_adv_param* adv_param =
-        BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
-            BT_GAP_ADV_FAST_INT_MIN_2,
-            BT_GAP_ADV_FAST_INT_MAX_2,
-            NULL);
-    int err;
-
-    err = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd,
-        ARRAY_SIZE(sd));
-    if (err)
-    {
-        printk("Failed to start advertiser (%d)\n", err);
-        return;
-    }
-    else
-    {
-        printk("Start advertiser (%d)\n", ad->type);
-    }
-}
 
 static void disconnected(struct bt_conn* conn, uint8_t reason)
 {
