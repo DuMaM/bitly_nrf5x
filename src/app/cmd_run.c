@@ -137,7 +137,8 @@ const struct bt_performance_test_cb performance_test_cb = {
 int test_init(const struct shell *shell,
               const struct bt_le_conn_param *conn_param,
               const struct bt_conn_le_phy_param *phy,
-              const struct bt_conn_le_data_len_param *data_len)
+              const struct bt_conn_le_data_len_param *data_len,
+              const bt_test_type_t type)
 {
     int err;
 
@@ -164,7 +165,7 @@ int test_init(const struct shell *shell,
     }
 
     /* reset peer metrics */
-    err = bt_performance_test_write(&performance_test, test_data_buffer, 1);
+    err = bt_performance_test_set_type(&performance_test, type);
     if (err)
     {
         shell_error(shell, "Reset peer metrics failed.");

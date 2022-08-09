@@ -49,7 +49,7 @@ int test_run_ber(const struct shell *shell,
     char pattern_string[7];
     int err;
 
-    err = test_init(shell, conn_param, phy, data_len);
+    err = test_init(shell, conn_param, phy, data_len, BT_TEST_TYPE_BER);
     if (err)
     {
         shell_error(shell, "Init test failed (err %d)", err);

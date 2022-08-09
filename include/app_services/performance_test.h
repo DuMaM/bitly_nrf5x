@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-/**
- * @file
- * @defgroup bt_performance_test Bluetooth LE GATT Performance test Service API
- * @{
- * @brief API for the Bluetooth LE GATT Performance test Service.
- */
+ /**
+  * @file
+  * @defgroup bt_performance_test Bluetooth LE GATT Performance test Service API
+  * @{
+  * @brief API for the Bluetooth LE GATT Performance test Service.
+  */
 
 #ifndef BT_PERF_TEST_H_
 #define BT_PERF_TEST_H_
@@ -52,7 +52,7 @@ extern "C"
          * @retval BT_GATT_ITER_CONTINUE To keep notifications enabled.
          * @retval BT_GATT_ITER_STOP To disable notifications.
          */
-        uint8_t (*data_read)(const struct bt_performance_test_metrics *met);
+        uint8_t(*data_read)(const struct bt_performance_test_metrics* met);
 
         /** @brief Data received callback.
          *
@@ -61,7 +61,7 @@ extern "C"
          *
          * @param[in] met Performance test metrics.
          */
-        void (*data_received)(const struct bt_performance_test_metrics *met);
+        void (*data_received)(const struct bt_performance_test_metrics* met);
 
         /** @brief Data send callback.
          *
@@ -70,24 +70,38 @@ extern "C"
          *
          * @param[in] met Performance test metrics.
          */
-        void (*data_send)(const struct bt_performance_test_metrics *met);
+        void (*data_send)(const struct bt_performance_test_metrics* met);
     };
 
-    typedef enum {
+    typedef enum
+    {
+        BT_TEST_TYPE_UNKNOWN,
+        BT_TEST_TYPE_RESET = BT_TEST_TYPE_UNKNOWN,
         BT_TEST_TYPE_SIMPLE,
         BT_TEST_TYPE_BER,
-        BT_TEST_TYPE_ANALOG
+        BT_TEST_TYPE_ANALOG,
+        BT_TEST_TYPE_SIM
     } bt_test_type_t;
 
-    typedef struct bt_ber_test {
+    typedef struct bt_ber_test
+    {
         /** Holds a pattern used to determine ber connection errors */
         uint8_t bt_test_pattern;
     } bt_ber_test_t;
 
-    typedef struct bt_test_data_t {
+    typedef struct bt_ecc_test_data
+    {
+        /** Holds a pattern used to determine ecc connection errors */
+        uint8_t bt_ecc_vc_value;
+    } bt_ecc_test_data_t;
+
+    typedef struct bt_test_data_t
+    {
         bt_test_type_t bt_test_type;
-        union test_data_t {
+        union test_data_t
+        {
             bt_ber_test_t ber;
+            bt_ecc_test_data_t ecc;
         } test_data;
     } bt_test_data_t;
 
@@ -97,18 +111,24 @@ extern "C"
         /** Performance test Characteristic handle. */
         uint16_t char_handle;
 
+        /** Performance test Descriptor type handle. */
+        uint16_t dsc_handle;
+
         /** GATT read parameters for the Performance test Characteristic. */
         struct bt_gatt_read_params read_params;
 
         /** Performance test callback structure. */
-        struct bt_performance_test_cb *cb;
+        struct bt_performance_test_cb* cb;
 
         /** Connection object. */
-        struct bt_conn *conn;
+        struct bt_conn* conn;
 
         /** Test parameters. */
-        bt_test_data_t *data;
+        bt_test_data_t* data;
     };
+
+    /** @brief Performance test Characteristic Descriptor UUID. */
+#define BT_UUID_PERF_TEST_DES BT_UUID_DECLARE_16(0x1525)
 
 /** @brief Performance test Characteristic UUID. */
 #define BT_UUID_PERF_TEST_CHAR BT_UUID_DECLARE_16(0x1524)
@@ -128,8 +148,8 @@ extern "C"
      *  @retval 0 If the operation was successful.
      *            Otherwise, a negative error code is returned.
      */
-    int bt_performance_test_init(struct bt_performance_test *performance_test,
-                                 const struct bt_performance_test_cb *cb);
+    int bt_performance_test_init(struct bt_performance_test* performance_test,
+        const struct bt_performance_test_cb* cb);
 
     /** @brief Assign handles to the Performance test Service instance.
      *
@@ -147,8 +167,8 @@ extern "C"
      * @retval (-ENOTSUP) Special error code used when the UUID
      *         of the service does not match the expected UUID.
      */
-    int bt_performance_test_handles_assign(struct bt_gatt_dm *dm,
-                                           struct bt_performance_test *performance_test);
+    int bt_performance_test_handles_assign(struct bt_gatt_dm* dm,
+        struct bt_performance_test* performance_test);
 
     /** @brief Read data from the server.
      *
@@ -159,7 +179,7 @@ extern "C"
      *  @retval 0 If the operation was successful.
      *            Otherwise, a negative error code is returned.
      */
-    int bt_performance_test_read(struct bt_performance_test *performance_test);
+    int bt_performance_test_read(struct bt_performance_test* performance_test);
 
     /** @brief Write data to the server.
      *
@@ -170,8 +190,18 @@ extern "C"
      *  @retval 0 If the operation was successful.
      *            Otherwise, a negative error code is returned.
      */
-    int bt_performance_test_write(struct bt_performance_test *performance_test,
-                                  const uint8_t *data, uint16_t len);
+    int bt_performance_test_write(struct bt_performance_test* performance_test,
+        const uint8_t* data, uint16_t len);
+
+    /** @brief Read descriptor data from the server
+     *
+     * @param[in] performance_test Performance test Service instance.
+     * @param[in] test type of test to be performed.
+     *
+     * @retval 0 If the operation was successful.
+     */
+    int bt_performance_test_set_type(struct bt_performance_test* performance_test,
+        bt_test_type_t type);
 
 #ifdef __cplusplus
 }

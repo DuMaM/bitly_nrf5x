@@ -12,6 +12,7 @@ static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv
 
 static int set_role_to_master(const struct shell *shell, size_t argc, char **argv)
 {
+    restore_state();
     shell_print(shell, "\nMaster role. Starting scanning\n");
     scan_start();
 

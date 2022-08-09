@@ -10,11 +10,10 @@ extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
-
-int sim_run(const struct shell *shell,
-             const struct bt_le_conn_param *conn_param,
-             const struct bt_conn_le_phy_param *phy,
-             const struct bt_conn_le_data_len_param *data_len)
+int sim_run(const struct shell* shell,
+    const struct bt_le_conn_param* conn_param,
+    const struct bt_conn_le_phy_param* phy,
+    const struct bt_conn_le_data_len_param* data_len)
 {
     int64_t stamp;
     int64_t delta;
@@ -22,7 +21,7 @@ int sim_run(const struct shell *shell,
     uint32_t data = 0;
     int err;
 
-    err = test_init(shell, conn_param, phy, data_len);
+    err = test_init(shell, conn_param, phy, data_len, BT_TEST_TYPE_SIM);
     if (err)
     {
         shell_error(shell, "GATT read failed (err %d)", err);
@@ -32,14 +31,15 @@ int sim_run(const struct shell *shell,
     /* get cycle stamp */
     stamp = k_uptime_get_32();
     int i = 0;
-    while (prog < 1000*12)
+    while (prog < 1000 * 12)
     {
         for (i = 0; i < test_data_buffer_size; i++)
         {
-            const float val =  **(sim_data + prog++);
+            const float val = **(sim_data + prog++);
             printk("%f ", val);
 
-            if (prog % 12 == 0) {
+            if (prog % 12 == 0)
+            {
                 printk("\n");
             }
             test_data_buffer[i] = val;
@@ -74,7 +74,7 @@ int sim_run(const struct shell *shell,
     return 0;
 }
 
-int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
+int sim_run_cmd(const struct shell* shell, size_t argc, char** argv)
 {
     return sim_run(shell, test_params.conn_param, test_params.phy, test_params.data_len);
 }
