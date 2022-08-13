@@ -9,10 +9,12 @@
 #include <bt_test.h>
 
 #include <sys/printk.h>
+#include <spi_adc.h>
 
 void main(void)
 {
     app_usb_init();
+    ads129x_init();
     bt_init();
 
     printk("\n");
