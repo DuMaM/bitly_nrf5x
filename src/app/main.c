@@ -14,7 +14,7 @@
 void main(void)
 {
     app_usb_init();
-    ads129x_init();
+    ads129x_setup();
     bt_init();
 
     printk("\n");

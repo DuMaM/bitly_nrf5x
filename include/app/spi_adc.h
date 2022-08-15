@@ -225,8 +225,8 @@ void ads129x_standby(void);
 void ads129x_start(void);
 void ads129x_stop(void);
 void ads129x_reset(void);
-void ads129x_read_registers(void);
-void ads129x_write_registers(void);
+uint8_t ads129x_read_registers(uint8_t _address, uint8_t _count);
+void ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t* _value);
 void ads129x_read_data(void);
 void ads129x_write_data(void);
 void ads129x_read_data_continuous(void);
@@ -234,7 +234,8 @@ void ads129x_write_data_continuous(void);
 void ads129x_read_data_single(void);
 void ads129x_write_data_single(void);
 
-void ads129x_get_device_id(void);
+uint8_t ads129x_get_device_id(void);
 void ads129x_get_configuration(void);
+void ads129x_setup();
 
 #endif

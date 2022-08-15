@@ -22,182 +22,173 @@
 #include <drivers/sensor.h>
 #include <drivers/spi.h>
 #include <sys/printk.h>
+#include <zephyr.h>
 
 #include <spi_adc.h>
 
-int ADS129X_CS;
 long ADS129X_data[9];
 bool ADS129X_newData;
 void ADS129X_dataReadyISR();
 
 #define RESET_NODE DT_NODELABEL(ads129x_reset)
-#define DRDY_NODE DT_NODELABEL(ads129x_drdy)
+#define RESET_FLAGS DT_GPIO_FLAGS(RESET_NODE, gpios)
+#define RESET_PIN DT_GPIO_PIN(RESET_NODE, gpios)
 
-struct spi_config spi_cfg = {0};
-struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
-struct gpio_dt_spec reset_spec = GPIO_DT_SPEC_GET_OR(RESET_NODE, gpios, {0});
+#define DRDY_NODE DT_NODELABEL(ads129x_drdy)
+#define DRDY_FLAGS DT_GPIO_FLAGS(DRDY_NODE, gpios)
+
+#define SPI_NODE DT_NODELABEL(nrf53_spi)
+#define ADS129_SPI_CLOCK_SPEED 4000000UL
+// must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
+#define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED)
 
 #if !DT_NODE_HAS_STATUS(DRDY_NODE, okay)
 #error "Unsupported board: drdy devicetree alias is not defined"
 #endif
 
 #if !DT_NODE_HAS_STATUS(RESET_NODE, okay)
-#error "Unsupported board: drdy devicetree alias is not defined"
+#error "Unsupported board: reset devicetree alias is not defined"
 #endif
+
+#if !DT_NODE_HAS_STATUS(SPI_NODE, okay)
+#error "Unsupported board: spi2 devicetree alias is not defined"
+#endif
+
+
+const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
+struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
+struct gpio_dt_spec reset_spec = GPIO_DT_SPEC_GET_OR(RESET_NODE, gpios, {0});
+const struct spi_cs_control ads129x_cs_ctrl = {
+    .gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
+    .delay = ADS129_SPI_CLOCK_DELAY,
+    .gpio_pin = 4,
+    .gpio_dt_flags = GPIO_ACTIVE_LOW
+};
+
+// arduino lib was working with SPI_MODE1
+// what means
+// Clock Polarity (CPOL)    Clock Phase (CPHA)	Output Edge     Data Capture
+// 0                        1                   Rising          Falling
+struct spi_config ads129x_spi_cfg = {
+    .frequency = ADS129_SPI_CLOCK_SPEED,
+    .operation = SPI_OP_MODE_MASTER | SPI_MODE_CPHA | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
+    .cs = &ads129x_cs_ctrl
+};
 
 /**
  * Initializes ADS129x library.
  */
-void ads129x_init(void) {
+void ads129x_init(void)
+{
     // SPI Setup
-    const struct device *spi = DEVICE_DT_GET(DT_NODELABEL(spi2));
     int ret;
 
     printk("SPI init\n");
-    if (!device_is_ready(spi)) {
-        printk("SPI device %s is not ready\n", spi->name);
+    if (!device_is_ready(ads129x_spi))
+    {
+        printk("SPI device %s is not ready\n", ads129x_spi->name);
         return;
     }
 
-    spi_cfg.operation = SPI_OP_MODE_MASTER | SPI_MODE_CPOL | SPI_MODE_CPHA;
-    spi_cfg.frequency = 4000000U;
-
-
     // initialize the data ready and chip select pins
-    if (!device_is_ready(drdy_spec.port)) {
+    if (!device_is_ready(drdy_spec.port))
+    {
         printk("Error: %s device is not ready\n", drdy_spec.port->name);
         return;
     }
 
-    if (!device_is_ready(reset_spec.port)) {
+    if (!device_is_ready(reset_spec.port))
+    {
         printk("Error: %s device is not ready\n", reset_spec.port->name);
         return;
     }
 
-    ret = gpio_pin_configure_dt(&drdy_spec, GPIO_PULL_UP);
-    if (ret != 0) {
+    ret = gpio_pin_configure_dt(&drdy_spec, GPIO_INPUT);
+    if (ret != 0)
+    {
         printk("Error %d: failed to configure pin %d (DRDY)\n", ret, drdy_spec.pin);
         return;
     }
 
     ret = gpio_pin_configure_dt(&reset_spec, GPIO_OUTPUT);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         printk("Error %d: failed to configure pin %d (RESET)\n", ret, reset_spec.pin);
         return;
     }
 }
 
-// struct {
-//     uint8_t ini_test;
-// } config2;
-
-
-// int spi_adc_init(void);
-// int spi_adc_write_to_reg(uint8_t reg, uint8_t value);
-// int spi_adc_set_test_signal(int amp, int freq, bool external)
-// {
-//     if (amp < 0 || amp > 255)
-//         return -1;
-
-//     if (amp > 0) {
-//         spi_adc_write_to_reg(REG_TEST_AMP, amp);
-//     }
-
-//     if (freq < 0 || freq > 255)
-//         return -1;
-
-//     if (freq > 0) {
-//         spi_adc_write_to_reg(REG_TEST_FREQ, freq);
-//     }
-
-//     if (external) {
-//         spi_adc_write_to_reg(REG_CONFIG2, MUX_TEST_SIGNAL);
-//     }
-// }
-
-static int mb85rs64v_access(const struct device *spi,
-                struct spi_config *spi_cfg,
-                uint8_t cmd, uint16_t addr, void *data, size_t len)
+static int ads129x_access(const struct device *_spi,
+                          struct spi_config *_spi_cfg,
+                          uint8_t _cmd,
+                          uint8_t *_data,
+                          uint8_t _len)
 {
-    uint8_t access[3];
-    struct spi_buf bufs[] = {
-        {
-            .buf = access,
-        },
-        {
-            .buf = data,
-            .len = len
-        }
-    };
-    struct spi_buf_set tx = {
-        .buffers = bufs
-    };
+    uint8_t cmd = _cmd;
+    uint8_t n = _len - 1;
+    struct spi_buf tx_bufs[] = {
+        {.buf = &cmd,
+         .len = sizeof(cmd)},
+        {.buf = &n,
+         .len = sizeof(n)},
+        {.buf = _data,
+         .len = _len}};
+    struct spi_buf_set tx = {.buffers = tx_bufs};
 
-    access[0] = cmd;
-
-    if (cmd == ADS129X_CMD_WREG || cmd == ADS129X_CMD_RDATA || cmd == ADS129X_CMD_RDATAC || cmd == ADS129X_CMD_RDATAC) {
-        access[1] = (addr >> 8) & 0xFF;
-        access[2] = addr & 0xFF;
-
-        bufs[0].len = 3;
+    if (cmd & ADS129X_CMD_RREG)
+    {
         tx.count = 2;
-
-        if (cmd != ADS129X_CMD_WREG) {
-            struct spi_buf_set rx = {
-                .buffers = bufs,
-                .count = 2
-            };
-
-            return spi_transceive(spi, spi_cfg, &tx, &rx);
-        }
-    } else {
-        tx.count = 1;
+        struct spi_buf rx_bufs[] = {
+            // skip response for cmd
+            {.buf = NULL, .len = sizeof(cmd)},
+            // get response after sending value number of regs
+            {.buf = NULL, .len = sizeof(n)},
+            {.buf = _data,
+             .len = _len}};
+        struct spi_buf_set rx = {.buffers = rx_bufs, .count = 3};
+        return spi_transceive(_spi, _spi_cfg, &tx, &rx);
     }
-
-    return spi_write(spi, spi_cfg, &tx);
+    else if (cmd & ADS129X_CMD_WREG)
+    {
+        tx.count = 3;
+        return spi_write(_spi, _spi_cfg, &tx);
+    }
+    else
+    {
+        tx.count = 1;
+        return spi_write(_spi, _spi_cfg, &tx);
+    }
 }
 
-//System Commands
+// System Commands
 
 /**
-//  * Exit Standby Mode.
-//  */
-// void ADS129X::WAKEUP() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW); //Low to communicate
-//     SPI.transfer(ADS129X_CMD_WAKEUP);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH); //High to end communication
-//     delayMicroseconds(2);  //must way at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
-//     SPI.endTransaction();
-// }
+ * Exit Standby Mode.
+ */
+void ads129x_wakeup(void)
+{
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_WAKEUP, NULL, 0);
+}
 
-// /**
-//  * Enter Standby Mode.
-//  */
-// void ADS129X::STANDBY() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW);
-//     SPI.transfer(ADS129X_CMD_STANDBY);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH);
-//     SPI.endTransaction();
-// }
+/**
+ * Enter Standby Mode.
+ */
+void ads129x_standby(void)
+{
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_STANDBY, NULL, 0);
+}
 
-// /**
-//  * Reset Registers to Default Values.
-//  */
-// void ADS129X::RESET() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW);
-//     SPI.transfer(ADS129X_CMD_RESET);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH);
-//     delay(10); //must wait 18 tCLK cycles to execute this command (Datasheet, pg. 38)
-//     SPI.endTransaction();
-// }
+/**
+ * Reset Registers to Default Values.
+ */
+void ads129x_reset(void)
+{
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RESET, NULL, 0);
+    // must wait 18 tCLK cycles to execute this command (Datasheet, pg. 38)
+    k_usleep(ADS129_SPI_CLOCK_DELAY * 5);
+}
 
-// /**
+//**
 //  * Start/restart (synchronize) conversions.
 //  */
 // void ADS129X::START() {
@@ -227,30 +218,21 @@ static int mb85rs64v_access(const struct device *spi,
 //     SPI.endTransaction();
 // }
 
-// /**
-//  * Enable Read Data Continuous mode (default).
-//  */
-// void ADS129X::RDATAC() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW);
-//     SPI.transfer(ADS129X_CMD_RDATAC);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH);
-//     delayMicroseconds(2); //must way at least 4 tCLK cycles before sending another command (Datasheet, pg. 39)
-//     SPI.endTransaction();
-// }
+/**
+ * Enable Read Data Continuous mode (default).
+ */
+void ads129x_rdatac()
+{
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATAC, NULL, 0);
+}
 
-// /**
-//  * Stop Read Data Continuously mode.
-//  */
-// void ADS129X::SDATAC() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW);
-//     SPI.transfer(ADS129X_CMD_SDATAC); //SDATAC
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH);
-//     SPI.endTransaction();
-// }
+/**
+ * Stop Read Data Continuously mode.
+ */
+void ads129x_sdatac()
+{
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_SDATAC, NULL, 0);
+}
 
 // /**
 //  * Read data by command; supports multiple read back.
@@ -264,24 +246,20 @@ static int mb85rs64v_access(const struct device *spi,
 //     SPI.endTransaction();
 // }
 
-// /**
-//  * Read register at address _address.
-//  * @param  _address register address
-//  * @return          value of register
-//  */
-// byte ADS129X::RREG(byte _address) {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     byte opcode1 = ADS129X_CMD_RREG | (_address & 0x1F); //001rrrrr; _RREG = 00100000 and _address = rrrrr
-//     digitalWrite(CS, LOW); //Low to communicate
-//     SPI.transfer(opcode1); //RREG
-//     SPI.transfer(0x00); //opcode2
-//     delayMicroseconds(1);
-//     byte data = SPI.transfer(0x00); // returned byte should match default of register map unless edited manually (Datasheet, pg.39)
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH); //High to end communication
-//     SPI.endTransaction();
-//     return data;
-// }
+/**
+ * Read register at address _address.
+ * @param  _address register address
+ * @return          value of register
+ */
+uint8_t ads129x_read_registers(uint8_t _address, uint8_t _n)
+{
+    // 001rrrrr; _RREG = 00100000 and _address = rrrrr
+    uint8_t opcode1 = ADS129X_CMD_RREG | (_address & 0x1F);
+    uint8_t reg_value = 0;
+    int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, &reg_value, sizeof(reg_value));
+    printk("Read register ended with: %d\n", ret);
+    return reg_value;
+}
 
 // /**
 //  * Read _numRegisters register starting at address _address.
@@ -304,38 +282,27 @@ static int mb85rs64v_access(const struct device *spi,
 //     SPI.endTransaction();
 // }
 
-// /**
-//  * Write register at address _address.
-//  * @param _address register address
-//  * @param _value   register value
-//  */
-// void ADS129X::WREG(byte _address, byte _value) {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     byte opcode1 = ADS129X_CMD_WREG | (_address & 0x1F); //001rrrrr; _RREG = 00100000 and _address = rrrrr
-//     digitalWrite(CS, LOW); //Low to communicate
-//     SPI.transfer(opcode1);
-//     SPI.transfer(0x00); // opcode2; only write one register
-//     SPI.transfer(_value);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH); //Low to communicate
-//     SPI.endTransaction();
-// }
+/**
+ * Write register at address _address.
+ * @param _address register address
+ * @param _value   register value
+ */
+void ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
+{
+    // 010wwwww; _WREG = 00100000 and _address = wwwww
+    uint8_t opcode1 = ADS129X_CMD_WREG | (_address & 0x1F);
+    int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
+    printk("Write register ended with: %d\n", ret);
+}
 
-// /**
-//  * Read device ID.
-//  * @return device ID
-//  */
-// byte ADS129X::getDeviceId() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW); //Low to communicate
-//     SPI.transfer(ADS129X_CMD_RREG); //RREG
-//     SPI.transfer(0x00); //Asking for 1 byte
-//     byte data = SPI.transfer(0x00); // byte to read (hopefully 0b???11110)
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH); //Low to communicate
-//     SPI.endTransaction();
-//     return data;
-// }
+/**
+ * Read device ID.
+ * @return device ID
+ */
+uint8_t ads129x_get_device_id(void)
+{
+    return ads129x_read_registers(ADS129X_REG_ID, 1);
+}
 
 // #ifndef ADS129X_POLLING
 // /**
@@ -442,3 +409,66 @@ static int mb85rs64v_access(const struct device *spi,
 //     byte value = ((_powerDown & 1)<<7) | ((_gain & 7)<<4) | (_mux & 7);
 //     WREG(ADS129X_REG_CH1SET + (_channel-1), value);
 // }
+
+// struct {
+//     uint8_t ini_test;
+// } config2;
+
+// int spi_adc_init(void);
+// int spi_adc_write_to_reg(uint8_t reg, uint8_t value);
+// int spi_adc_set_test_signal(int amp, int freq, bool external)
+// {
+//     if (amp < 0 || amp > 255)
+//         return -1;
+
+//     if (amp > 0) {
+//         spi_adc_write_to_reg(REG_TEST_AMP, amp);
+//     }
+
+//     if (freq < 0 || freq > 255)
+//         return -1;
+
+//     if (freq > 0) {
+//         spi_adc_write_to_reg(REG_TEST_FREQ, freq);
+//     }
+
+//     if (external) {
+//         spi_adc_write_to_reg(REG_CONFIG2, MUX_TEST_SIGNAL);
+//     }
+// }
+
+void ads129x_setup()
+{
+
+    ads129x_init();
+    gpio_pin_set_dt(&reset_spec, 1);
+    k_msleep(100);
+
+    // reset pulse
+    gpio_pin_toggle_dt(&reset_spec);
+    // Wait for 18 tCLKs AKA 9 microseconds, we use 1 millisec
+    k_msleep(1);
+
+    ads129x_sdatac(); // device wakes up in RDATAC mode, so send stop signal
+    uint8_t sample_rate = ADS129X_SAMPLERATE_1024;
+    ads129x_write_registers(ADS129X_REG_CONFIG1, 1, &sample_rate);
+    uint8_t enable_internal_reference = (1 << ADS129X_BIT_PD_REFBUF) | (1 << 6);
+    ads129x_write_registers(ADS129X_REG_CONFIG3, 1, &enable_internal_reference);
+
+    // setup channels
+    //   ADS.configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
+    //   ADS.configChannel(2, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
+    //   for (int i = 3; i <= 8; i++) {
+    //     ADS.configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
+    //   }
+
+    //   delay(1);
+    //   ADS.RDATAC();
+    //   ADS.START();
+
+    //   Serial.begin(1000000); // always at 12Mbit/s
+    //   Serial.println("Firmware v0.0.1");
+
+    uint8_t dev_id = ads129x_get_device_id();
+    printk("Device ID: %d\n", dev_id);
+}
