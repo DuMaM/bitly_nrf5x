@@ -51,9 +51,10 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 #define SPI_NODE DT_NODELABEL(nrf53_spi)
 #define ADS129_SPI_CLOCK_SPEED 4000000UL
 #define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED) // must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
-#define ADS129x_DATA_BUFFER_SIZE 9
+#define ADS129_SPI_STATUS_WORD_SIZE 3
+#define ADS129x_DATA_BUFFER_SIZE (8*3 + ADS129_SPI_STATUS_WORD_SIZE)
 
-long ADS129X_data[ADS129x_DATA_BUFFER_SIZE];
+uint8_t ADS129X_data[ADS129x_DATA_BUFFER_SIZE];
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
     .gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
@@ -230,7 +231,7 @@ void ads129x_sdatac(void)
  */
 void ads129x_read_data(void)
 {
-
+    gpio_pin_set_dt(start_spec, 1)
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, ADS129X_data, ADS129x_DATA_BUFFER_SIZE);
 }
 
@@ -390,17 +391,17 @@ int ads129x_get_device_id(uint8_t *dev_id)
 // #endif
 // }
 
-// /**
-//  * Configure channel _channel.
-//  * @param _channel   channel (1-8)
-//  * @param _powerDown power down (true, false)
-//  * @param _gain      gain setting
-//  * @param _mux       mux setting
-//  */
-// void ADS129X::configChannel(byte _channel, boolean _powerDown, byte _gain, byte _mux) {
-//     byte value = ((_powerDown & 1)<<7) | ((_gain & 7)<<4) | (_mux & 7);
-//     WREG(ADS129X_REG_CH1SET + (_channel-1), value);
-// }
+/**
+ * Configure channel _channel.
+ * @param _channel   channel (1-8)
+ * @param _powerDown power down (true, false)
+ * @param _gain      gain setting
+ * @param _mux       mux setting
+ */
+void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uint8_t _mux) {
+    uint8_t value = ((_powerDown & 1)<<7) | ((_gain & 7)<<4) | (_mux & 7);
+    ads129x_write_registers(ADS129X_REG_CH1SET + (_channel-1), 1, value);
+}
 
 // struct {
 //     uint8_t ini_test;
@@ -502,11 +503,11 @@ void ads129x_setup()
     ads129x_write_registers(ADS129X_REG_CONFIG3, 1, &enable_internal_reference);
 
     // setup channels
-    //   ADS.configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
-    //   ADS.configChannel(2, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
-    //   for (int i = 3; i <= 8; i++) {
-    //     ADS.configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
-    //   }
+    ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
+    ads129x_configChannel(2, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
+    for (int i = 3; i <= 8; i++) {
+        ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
+    }
 
     //   delay(1);
     //   ADS.RDATAC();
