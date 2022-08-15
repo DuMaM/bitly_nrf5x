@@ -135,7 +135,19 @@ static int ads129x_access(const struct device *_spi,
          .len = _len}};
     struct spi_buf_set tx = {.buffers = tx_bufs};
 
-    if (cmd & ADS129X_CMD_RREG)
+    if (cmd & ADS129X_CMD_RDATA)
+    {
+        tx.count = 1;
+        struct spi_buf rx_bufs[] = {
+            // skip response for cmd
+            {.buf = NULL, .len = sizeof(cmd)},
+            // get response after sending value number of regs
+            {.buf = _data,
+             .len = _len}};
+        struct spi_buf_set rx = {.buffers = rx_bufs, .count = sizeof(rx_bufs)/sizeof(rx_bufs[0])};
+        return spi_transceive(_spi, _spi_cfg, &tx, &rx);
+    }
+    else if (cmd & ADS129X_CMD_RREG)
     {
         tx.count = 2;
         struct spi_buf rx_bufs[] = {
@@ -221,7 +233,7 @@ void ads129x_reset(void)
 /**
  * Enable Read Data Continuous mode (default).
  */
-void ads129x_rdatac()
+void ads129x_rdatac(void)
 {
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATAC, NULL, 0);
 }
@@ -229,79 +241,80 @@ void ads129x_rdatac()
 /**
  * Stop Read Data Continuously mode.
  */
-void ads129x_sdatac()
+void ads129x_sdatac(void)
 {
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_SDATAC, NULL, 0);
 }
 
-// /**
-//  * Read data by command; supports multiple read back.
-//  */
-// void ADS129X::RDATA() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW);
-//     SPI.transfer(ADS129X_CMD_RDATA);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH);
-//     SPI.endTransaction();
-// }
-
 /**
- * Read register at address _address.
- * @param  _address register address
- * @return          value of register
+ * Read data by command; supports multiple read back.
  */
-uint8_t ads129x_read_registers(uint8_t _address, uint8_t _n)
+void ads129x_read_data(void)
 {
-    // 001rrrrr; _RREG = 00100000 and _address = rrrrr
-    uint8_t opcode1 = ADS129X_CMD_RREG | (_address & 0x1F);
-    uint8_t reg_value = 0;
-    int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, &reg_value, sizeof(reg_value));
-    printk("Read register ended with: %d\n", ret);
-    return reg_value;
+
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, ADS129X_data, ADS129x_DATA_BUFFER_SIZE);
 }
 
-// /**
-//  * Read _numRegisters register starting at address _address.
-//  * @param _address      start address
-//  * @param _numRegisters number of registers
-//  * @param data          pointer to data array
-//  */
-// void ADS129X::RREG(byte _address, byte _numRegisters, byte *_data) {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     byte opcode1 = ADS129X_CMD_RREG | (_address & 0x1F); //001rrrrr; _RREG = 00100000 and _address = rrrrr
-//     digitalWrite(CS, LOW); //Low to communicated
-//     SPI.transfer(ADS129X_CMD_SDATAC); //SDATAC
-//     SPI.transfer(opcode1); //RREG
-//     SPI.transfer(_numRegisters-1); //opcode2
-//     for(byte i = 0; i < _numRegisters; i++){
-//         *(_data+i) = SPI.transfer(0x00); // returned byte should match default of register map unless previously edited manually (Datasheet, pg.39)
-//     }
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH); //High to end communication
-//     SPI.endTransaction();
-// }
+/**
+ * Locks spi and keeps cs low for purpose of sending multiple commands
+ */
+static void ads129x_lock_spi(void)
+{
+    WRITE_BIT_VAL(ads129x_spi_cfg.operation, (SPI_LOCK_ON | SPI_HOLD_ON_CS), 1);
+}
+
+/**
+ * Unlocks spi and release cs
+ */
+static void ads129x_unlock_spi(void)
+{
+    spi_release(ads129x_spi, &ads129x_spi_cfg);
+    WRITE_BIT_VAL(ads129x_spi_cfg.operation, (SPI_LOCK_ON | SPI_HOLD_ON_CS), 0);
+}
+
+/**
+ * Read _numRegisters register starting at address _address.
+ * @param _address      start address
+ * @param _numRegisters number of registers
+ * @param data          pointer to data array
+ */
+int ads129x_read_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
+{
+    // lock spi and cs
+    ads129x_lock_spi();
+
+    // stop continuous read which leads to interferences
+    ads129x_sdatac();
+
+    // 001rrrrr; _RREG = 00100000 and _address = rrrrr
+    uint8_t opcode1 = ADS129X_CMD_RREG | (_address & 0x1F);
+    int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
+    printk("Read register ended with: %d\n", ret);
+
+    // unlock after successful operation
+    ads129x_unlock_spi();
+    return ret;
+}
 
 /**
  * Write register at address _address.
  * @param _address register address
  * @param _value   register value
  */
-void ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
+int ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
 {
     // 010wwwww; _WREG = 00100000 and _address = wwwww
     uint8_t opcode1 = ADS129X_CMD_WREG | (_address & 0x1F);
-    int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
-    printk("Write register ended with: %d\n", ret);
+    return ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
 }
 
 /**
  * Read device ID.
  * @return device ID
  */
-uint8_t ads129x_get_device_id(void)
+int ads129x_get_device_id(uint8_t *dev_id)
 {
-    return ads129x_read_registers(ADS129X_REG_ID, 1);
+    return ads129x_read_registers(ADS129X_REG_ID, 1, dev_id);
 }
 
 // #ifndef ADS129X_POLLING
@@ -439,7 +452,6 @@ uint8_t ads129x_get_device_id(void)
 
 void ads129x_setup()
 {
-
     ads129x_init();
     gpio_pin_set_dt(&reset_spec, 1);
     k_msleep(100);
@@ -469,6 +481,7 @@ void ads129x_setup()
     //   Serial.begin(1000000); // always at 12Mbit/s
     //   Serial.println("Firmware v0.0.1");
 
-    uint8_t dev_id = ads129x_get_device_id();
+    uint8_t dev_id = 0;
+    ads129x_get_device_id(&dev_id);
     printk("Device ID: %d\n", dev_id);
 }
