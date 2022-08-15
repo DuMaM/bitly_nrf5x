@@ -26,22 +26,51 @@
 
 #include <spi_adc.h>
 
-long ADS129X_data[9];
 bool ADS129X_newData;
 void ADS129X_dataReadyISR();
 
+// start pin
+#define START_NODE DT_NODELABEL(ads129x_start)
+#define START_FLAGS DT_GPIO_FLAGS(START_NODE, gpios)
+#define START_PIN DT_GPIO_PIN(START_NODE, gpios)
+struct gpio_dt_spec start_spec = GPIO_DT_SPEC_GET_OR(START_NODE, gpios, {0});
+
+// reset pin
 #define RESET_NODE DT_NODELABEL(ads129x_reset)
 #define RESET_FLAGS DT_GPIO_FLAGS(RESET_NODE, gpios)
 #define RESET_PIN DT_GPIO_PIN(RESET_NODE, gpios)
+struct gpio_dt_spec reset_spec = GPIO_DT_SPEC_GET_OR(RESET_NODE, gpios, {0});
 
+// drdy pin
 #define DRDY_NODE DT_NODELABEL(ads129x_drdy)
 #define DRDY_FLAGS DT_GPIO_FLAGS(DRDY_NODE, gpios)
+#define DRDY_PIN DT_GPIO_PIN(DRDY_NODE, gpios)
+struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 
+// spi but macros and objects
 #define SPI_NODE DT_NODELABEL(nrf53_spi)
 #define ADS129_SPI_CLOCK_SPEED 4000000UL
-// must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
-#define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED)
+#define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED) // must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
+#define ADS129x_DATA_BUFFER_SIZE 9
 
+long ADS129X_data[ADS129x_DATA_BUFFER_SIZE];
+const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
+const struct spi_cs_control ads129x_cs_ctrl = {
+    .gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
+    .delay = ADS129_SPI_CLOCK_DELAY,
+    .gpio_pin = 4,
+    .gpio_dt_flags = GPIO_ACTIVE_LOW};
+
+// arduino lib was working with SPI_MODE1
+// what means
+// Clock Polarity (CPOL)    Clock Phase (CPHA)	Output Edge     Data Capture
+// 0                        1                   Rising          Falling
+struct spi_config ads129x_spi_cfg = {
+    .frequency = ADS129_SPI_CLOCK_SPEED,
+    .operation = SPI_OP_MODE_MASTER | SPI_MODE_CPHA | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
+    .cs = &ads129x_cs_ctrl};
+
+// checks
 #if !DT_NODE_HAS_STATUS(DRDY_NODE, okay)
 #error "Unsupported board: drdy devicetree alias is not defined"
 #endif
@@ -54,69 +83,19 @@ void ADS129X_dataReadyISR();
 #error "Unsupported board: spi2 devicetree alias is not defined"
 #endif
 
-
-const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
-struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
-struct gpio_dt_spec reset_spec = GPIO_DT_SPEC_GET_OR(RESET_NODE, gpios, {0});
-const struct spi_cs_control ads129x_cs_ctrl = {
-    .gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
-    .delay = ADS129_SPI_CLOCK_DELAY,
-    .gpio_pin = 4,
-    .gpio_dt_flags = GPIO_ACTIVE_LOW
-};
-
-// arduino lib was working with SPI_MODE1
-// what means
-// Clock Polarity (CPOL)    Clock Phase (CPHA)	Output Edge     Data Capture
-// 0                        1                   Rising          Falling
-struct spi_config ads129x_spi_cfg = {
-    .frequency = ADS129_SPI_CLOCK_SPEED,
-    .operation = SPI_OP_MODE_MASTER | SPI_MODE_CPHA | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
-    .cs = &ads129x_cs_ctrl
-};
-
 /**
- * Initializes ADS129x library.
+ * @brief Set or clear a bit depending on a boolean value
+ *
+ * The argument @p var is a variable whose value is written to as a
+ * side effect.
+ *
+ * @param var Variable to be altered
+ * @param bit Bit number
+ * @param set if 0, clears @p bit in @p var; any other value sets @p bit
  */
-void ads129x_init(void)
-{
-    // SPI Setup
-    int ret;
+#define WRITE_BIT_VAL(var, bit, set) \
+    ((var) = (set) ? ((var) | bit) : ((var) & ~bit))
 
-    printk("SPI init\n");
-    if (!device_is_ready(ads129x_spi))
-    {
-        printk("SPI device %s is not ready\n", ads129x_spi->name);
-        return;
-    }
-
-    // initialize the data ready and chip select pins
-    if (!device_is_ready(drdy_spec.port))
-    {
-        printk("Error: %s device is not ready\n", drdy_spec.port->name);
-        return;
-    }
-
-    if (!device_is_ready(reset_spec.port))
-    {
-        printk("Error: %s device is not ready\n", reset_spec.port->name);
-        return;
-    }
-
-    ret = gpio_pin_configure_dt(&drdy_spec, GPIO_INPUT);
-    if (ret != 0)
-    {
-        printk("Error %d: failed to configure pin %d (DRDY)\n", ret, drdy_spec.pin);
-        return;
-    }
-
-    ret = gpio_pin_configure_dt(&reset_spec, GPIO_OUTPUT);
-    if (ret != 0)
-    {
-        printk("Error %d: failed to configure pin %d (RESET)\n", ret, reset_spec.pin);
-        return;
-    }
-}
 
 static int ads129x_access(const struct device *_spi,
                           struct spi_config *_spi_cfg,
@@ -449,6 +428,61 @@ int ads129x_get_device_id(uint8_t *dev_id)
 //         spi_adc_write_to_reg(REG_CONFIG2, MUX_TEST_SIGNAL);
 //     }
 // }
+
+/**
+ * Initializes ADS129x library.
+ */
+void ads129x_init(void)
+{
+    // SPI Setup
+    int ret;
+    printk("SPI init\n");
+    if (!device_is_ready(ads129x_spi))
+    {
+        printk("SPI device %s is not ready\n", ads129x_spi->name);
+        return;
+    }
+
+    // initialize the data ready, reset, and start pins
+    if (!device_is_ready(drdy_spec.port))
+    {
+        printk("Error: %s device is not ready\n", drdy_spec.port->name);
+        return;
+    }
+
+    if (!device_is_ready(reset_spec.port))
+    {
+        printk("Error: %s device is not ready\n", reset_spec.port->name);
+        return;
+    }
+
+    if (!device_is_ready(start_spec.port))
+    {
+        printk("Error: %s device is not ready\n", start_spec.port->name);
+        return;
+    }
+
+    ret = gpio_pin_configure_dt(&drdy_spec, GPIO_INPUT);
+    if (ret != 0)
+    {
+        printk("Error %d: failed to configure pin %d (DRDY)\n", ret, drdy_spec.pin);
+        return;
+    }
+
+    ret = gpio_pin_configure_dt(&reset_spec, GPIO_OUTPUT);
+    if (ret != 0)
+    {
+        printk("Error %d: failed to configure pin %d (RESET)\n", ret, reset_spec.pin);
+        return;
+    }
+
+    ret = gpio_pin_configure_dt(&start_spec, GPIO_OUTPUT);
+    if (ret != 0)
+    {
+        printk("Error %d: failed to configure pin %d (START)\n", ret, start_spec.pin);
+        return;
+    }
+}
 
 void ads129x_setup()
 {

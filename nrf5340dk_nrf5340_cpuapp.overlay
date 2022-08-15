@@ -78,7 +78,7 @@ nrf53_spi: &spi1 {
         compatible = "gpio-keys";
         ads129x_drdy: ads129x_drdy {
             gpios = <&arduino_header 20 GPIO_ACTIVE_HIGH>;
-            label = "Data ready indcator";
+            label = "ADS129X_DRDY_PIN";
         };
     };
 
@@ -86,7 +86,12 @@ nrf53_spi: &spi1 {
         compatible = "gpio-leds";
         ads129x_reset: ads129x_reset {
             gpios = <&arduino_header 21 GPIO_ACTIVE_HIGH>;
-            label = "Reset";
+            label = "ADS129X_RESET_PIN";
+        };
+
+        ads129x_start: ads129x_start {
+            gpios = <&arduino_header 22 GPIO_ACTIVE_HIGH>;
+            label = "ADS129X_START_PIN";
         };
     };
 };
