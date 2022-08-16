@@ -26,8 +26,8 @@
 
 #include <spi_adc.h>
 
-bool ADS129X_newData;
-void ADS129X_dataReadyISR();
+static void ads129x_drdy_init_callback(void);
+static void ads129x_drdy_callback_deinit(void);
 
 // start pin
 #define START_NODE DT_NODELABEL(ads129x_start)
@@ -52,7 +52,7 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 #define ADS129_SPI_CLOCK_SPEED 4000000UL
 #define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED) // must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
 #define ADS129_SPI_STATUS_WORD_SIZE 3
-#define ADS129x_DATA_BUFFER_SIZE (8*3 + ADS129_SPI_STATUS_WORD_SIZE)
+#define ADS129x_DATA_BUFFER_SIZE (8 * 3 + ADS129_SPI_STATUS_WORD_SIZE)
 
 uint8_t ADS129X_data[ADS129x_DATA_BUFFER_SIZE];
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
@@ -180,35 +180,23 @@ void ads129x_reset(void)
     k_usleep(ADS129_SPI_CLOCK_DELAY * 5);
 }
 
-//**
-//  * Start/restart (synchronize) conversions.
-//  */
-// void ADS129X::START() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW);
-//     SPI.transfer(ADS129X_CMD_START);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH);
-//     SPI.endTransaction();
-// #ifndef ADS129X_POLLING
-//     attachInterrupt(DRDY, ADS129X_dataReadyISR, FALLING);
-// #endif
-// }
+/**
+ * Start/restart (synchronize) conversions.
+ */
+void ads129x_start(void)
+{
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_START, NULL, 0);
+    ads129x_drdy_init_callback();
+}
 
-// /**
-//  * Stop conversion.
-//  */
-// void ADS129X::STOP() {
-// #ifndef ADS129X_POLLING
-//         detachInterrupt(DRDY);
-// #endif
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(CS, LOW);
-//     SPI.transfer(ADS129X_CMD_STOP);
-//     delayMicroseconds(2);
-//     digitalWrite(CS, HIGH);
-//     SPI.endTransaction();
-// }
+/**
+ * Stop conversion.
+ */
+void ads129x_stop()
+{
+    ads129x_drdy_callback_deinit();
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_STOP, NULL, 0);
+}
 
 /**
  * Enable Read Data Continuous mode (default).
@@ -297,64 +285,35 @@ int ads129x_get_device_id(uint8_t *dev_id)
     return ads129x_read_registers(ADS129X_REG_ID, 1, dev_id);
 }
 
-// #ifndef ADS129X_POLLING
-// /**
-//  * Interrupt that gets called when DRDY goes HIGH.
-//  * Transfers data and sets a flag.
-//  */
-// void ADS129X_dataReadyISR() {
-//     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//     digitalWrite(ADS129X_CS, LOW);
-//     // status
-//     ((char*) ADS129X_data)[0*4+3] = 0;
-//     ((char*) ADS129X_data)[0*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[0*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[0*4+0] = SPI.transfer(0x00);
-//     // channel 1
-//     ((char*) ADS129X_data)[1*4+3] = 0;
-//     ((char*) ADS129X_data)[1*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[1*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[1*4+0] = SPI.transfer(0x00);
-//     // channel 2
-//     ((char*) ADS129X_data)[2*4+3] = 0;
-//     ((char*) ADS129X_data)[2*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[2*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[2*4+0] = SPI.transfer(0x00);
-//     // channel 3
-//     ((char*) ADS129X_data)[3*4+3] = 0;
-//     ((char*) ADS129X_data)[3*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[3*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[3*4+0] = SPI.transfer(0x00);
-//     // channel 4
-//     ((char*) ADS129X_data)[4*4+3] = 0;
-//     ((char*) ADS129X_data)[4*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[4*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[4*4+0] = SPI.transfer(0x00);
-//     // channel 5
-//     ((char*) ADS129X_data)[5*4+3] = 0;
-//     ((char*) ADS129X_data)[5*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[5*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[5*4+0] = SPI.transfer(0x00);
-//     // channel 6
-//     ((char*) ADS129X_data)[6*4+3] = 0;
-//     ((char*) ADS129X_data)[6*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[6*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[6*4+0] = SPI.transfer(0x00);
-//     // channel 7
-//     ((char*) ADS129X_data)[7*4+3] = 0;
-//     ((char*) ADS129X_data)[7*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[7*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[7*4+0] = SPI.transfer(0x00);
-//     // channel 8
-//     ((char*) ADS129X_data)[8*4+3] = 0;
-//     ((char*) ADS129X_data)[8*4+2] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[8*4+1] = SPI.transfer(0x00);
-//     ((char*) ADS129X_data)[8*4+0] = SPI.transfer(0x00);
-//     digitalWrite(ADS129X_CS, HIGH);
-//     SPI.endTransaction();
-//     ADS129X_newData = true;
-// }
-// #endif
+/* add gpio callbacks */
+static struct gpio_callback drdy_cb_data;
+static void drdy_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    static struct spi_buf rx_bufs[] = {{.buf = ADS129X_data, .len = ADS129x_DATA_BUFFER_SIZE}};
+    static struct spi_buf_set rx = {.buffers = rx_bufs, .count = 1};
+    return spi_read(_spi, _spi_cfg, &rx);
+
+    uint64_t now = k_uptime_get();
+    printk("DRDT showed at %lld\n", now);
+    gpio_pin_toggle_dt(&led);
+}
+
+static void ads129x_drdy_init_callback(void)
+{
+    // configure the interrupt on drdy press (pin goes from low to high)
+    gpio_pin_interrupt_configure_dt(&drdy_spec, GPIO_INT_EDGE_TO_INACTIVE);
+
+    // setup the drdy change callback
+    gpio_init_callback(&drdy_cb_data, drdy_callback, BIT(drdy_spec.pin));
+    gpio_add_callback(drdy_spec.port, &drdy_cb_data);
+}
+
+void ads129x_drdy_callback_deinit()
+{
+    gpio_pin_interrupt_configure_dt(&drdy_spec, GPIO_INT_DISABLE);
+    gpio_remove_callback(drdy_spec.port, &drdy_cb_data);
+}
+
 
 // /**
 //  * Receive data when in continuous read mode.
@@ -398,9 +357,10 @@ int ads129x_get_device_id(uint8_t *dev_id)
  * @param _gain      gain setting
  * @param _mux       mux setting
  */
-void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uint8_t _mux) {
-    uint8_t value = ((_powerDown & 1)<<7) | ((_gain & 7)<<4) | (_mux & 7);
-    ads129x_write_registers(ADS129X_REG_CH1SET + (_channel-1), 1, value);
+void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uint8_t _mux)
+{
+    uint8_t value = ((_powerDown & 1) << 7) | ((_gain & 7) << 4) | (_mux & 7);
+    ads129x_write_registers(ADS129X_REG_CH1SET + (_channel - 1), 1, value);
 }
 
 // struct {
@@ -505,7 +465,8 @@ void ads129x_setup()
     // setup channels
     ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
     ads129x_configChannel(2, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
-    for (int i = 3; i <= 8; i++) {
+    for (int i = 3; i <= 8; i++)
+    {
         ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
     }
 
