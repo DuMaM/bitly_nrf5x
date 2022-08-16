@@ -89,10 +89,10 @@ nrf53_spi: &spi1 {
             label = "ADS129X_RESET_PIN";
         };
 
-        ads129x_start: ads129x_start {
-            gpios = <&arduino_header 22 GPIO_ACTIVE_HIGH>;
-            label = "ADS129X_START_PIN";
-        };
+        // ads129x_start: ads129x_start {
+        //     gpios = <&arduino_header 22 GPIO_ACTIVE_HIGH>;
+        //     label = "ADS129X_START_PIN";
+        // };
     };
 };
 

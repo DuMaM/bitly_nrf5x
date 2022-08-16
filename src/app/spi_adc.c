@@ -30,10 +30,12 @@ static void ads129x_drdy_init_callback(void);
 static void ads129x_drdy_callback_deinit(void);
 
 // start pin
-#define START_NODE DT_NODELABEL(ads129x_start)
+// #define START_NODE DT_NODELABEL(ads129x_start)
+#if defined(START_NODE)
 #define START_FLAGS DT_GPIO_FLAGS(START_NODE, gpios)
 #define START_PIN DT_GPIO_PIN(START_NODE, gpios)
 struct gpio_dt_spec start_spec = GPIO_DT_SPEC_GET_OR(START_NODE, gpios, {0});
+#endif
 
 // reset pin
 #define RESET_NODE DT_NODELABEL(ads129x_reset)
@@ -138,17 +140,17 @@ static int ads129x_access(const struct device *_spi,
             {.buf = _data,
              .len = _len}};
         struct spi_buf_set rx = {.buffers = rx_bufs, .count = 3};
-        return spi_transceive(_spi, _spi_cfg, &tx, &rx);
+        return spi_transceive(ads129x_spi, &ads129x_spi_cfg, &tx, &rx);
     }
     else if (cmd & ADS129X_CMD_WREG)
     {
         tx.count = 3;
-        return spi_write(_spi, _spi_cfg, &tx);
+        return spi_write(ads129x_spi, &ads129x_spi_cfg, &tx);
     }
     else
     {
         tx.count = 1;
-        return spi_write(_spi, _spi_cfg, &tx);
+        return spi_write(ads129x_spi, &ads129x_spi_cfg, &tx);
     }
 }
 
@@ -219,7 +221,6 @@ void ads129x_sdatac(void)
  */
 void ads129x_read_data(void)
 {
-    gpio_pin_set_dt(start_spec, 1)
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, ADS129X_data, ADS129x_DATA_BUFFER_SIZE);
 }
 
@@ -286,16 +287,16 @@ int ads129x_get_device_id(uint8_t *dev_id)
 }
 
 /* add gpio callbacks */
+bool ads129x_new_data = false;
 static struct gpio_callback drdy_cb_data;
 static void drdy_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     static struct spi_buf rx_bufs[] = {{.buf = ADS129X_data, .len = ADS129x_DATA_BUFFER_SIZE}};
     static struct spi_buf_set rx = {.buffers = rx_bufs, .count = 1};
-    return spi_read(_spi, _spi_cfg, &rx);
 
-    uint64_t now = k_uptime_get();
-    printk("DRDT showed at %lld\n", now);
-    gpio_pin_toggle_dt(&led);
+    if (spi_read(ads129x_spi, &ads129x_spi_cfg, &rx) > 0) {
+        ads129x_new_data = true;
+    }
 }
 
 static void ads129x_drdy_init_callback(void)
@@ -314,42 +315,6 @@ void ads129x_drdy_callback_deinit()
     gpio_remove_callback(drdy_spec.port, &drdy_cb_data);
 }
 
-
-// /**
-//  * Receive data when in continuous read mode.
-//  * @param buffer buffer for received data
-//  * @return true when received data
-//  */
-// boolean ADS129X::getData(long *buffer) {
-// #ifndef ADS129X_POLLING
-//     if (ADS129X_newData) {
-//         ADS129X_newData = false;
-//         for (int i = 0; i < 9; i++) {
-//             buffer[i] = ADS129X_data[i];
-//         }
-//         return true;
-//     }
-//     return false;
-// #else
-//     if (digitalRead(DRDY) == LOW) {
-//         SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
-//         digitalWrite(CS, LOW);
-//         for(int i = 0; i<9; i++){
-//             long dataPacket = 0;
-//             for(int j = 0; j<3; j++){
-//                 byte dataByte = SPI.transfer(0x00);
-//                 dataPacket = (dataPacket<<8) | dataByte;
-//             }
-//             buffer[i] = dataPacket;
-//         }
-//         digitalWrite(CS, HIGH);
-//         SPI.endTransaction();
-//         return true;
-//     }
-//     return false;
-// #endif
-// }
-
 /**
  * Configure channel _channel.
  * @param _channel   channel (1-8)
@@ -360,7 +325,7 @@ void ads129x_drdy_callback_deinit()
 void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uint8_t _mux)
 {
     uint8_t value = ((_powerDown & 1) << 7) | ((_gain & 7) << 4) | (_mux & 7);
-    ads129x_write_registers(ADS129X_REG_CH1SET + (_channel - 1), 1, value);
+    ads129x_write_registers(ADS129X_REG_CH1SET + (_channel - 1), 1, &value);
 }
 
 // struct {
@@ -405,21 +370,10 @@ void ads129x_init(void)
     }
 
     // initialize the data ready, reset, and start pins
+#ifdef DRDY_NODE
     if (!device_is_ready(drdy_spec.port))
     {
         printk("Error: %s device is not ready\n", drdy_spec.port->name);
-        return;
-    }
-
-    if (!device_is_ready(reset_spec.port))
-    {
-        printk("Error: %s device is not ready\n", reset_spec.port->name);
-        return;
-    }
-
-    if (!device_is_ready(start_spec.port))
-    {
-        printk("Error: %s device is not ready\n", start_spec.port->name);
         return;
     }
 
@@ -429,11 +383,27 @@ void ads129x_init(void)
         printk("Error %d: failed to configure pin %d (DRDY)\n", ret, drdy_spec.pin);
         return;
     }
+#endif
+
+#ifdef RESET_NODE
+    if (!device_is_ready(reset_spec.port))
+    {
+        printk("Error: %s device is not ready\n", reset_spec.port->name);
+        return;
+    }
 
     ret = gpio_pin_configure_dt(&reset_spec, GPIO_OUTPUT);
     if (ret != 0)
     {
         printk("Error %d: failed to configure pin %d (RESET)\n", ret, reset_spec.pin);
+        return;
+    }
+#endif
+
+#ifdef START_NODE
+    if (!device_is_ready(start_spec.port))
+    {
+        printk("Error: %s device is not ready\n", start_spec.port->name);
         return;
     }
 
@@ -443,9 +413,11 @@ void ads129x_init(void)
         printk("Error %d: failed to configure pin %d (START)\n", ret, start_spec.pin);
         return;
     }
+
+#endif
 }
 
-void ads129x_setup()
+void ads129x_setup(void)
 {
     ads129x_init();
     gpio_pin_set_dt(&reset_spec, 1);
@@ -470,12 +442,9 @@ void ads129x_setup()
         ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
     }
 
-    //   delay(1);
-    //   ADS.RDATAC();
-    //   ADS.START();
-
-    //   Serial.begin(1000000); // always at 12Mbit/s
-    //   Serial.println("Firmware v0.0.1");
+    k_msleep(1);
+    ads129x_rdatac();
+    ads129x_start();
 
     uint8_t dev_id = 0;
     ads129x_get_device_id(&dev_id);
