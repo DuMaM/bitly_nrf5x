@@ -26,11 +26,18 @@
 
 #include <spi_adc.h>
 
+#include <zephyr/logging/log.h>
+
+/*LOG_MODULE_REGISTER(ads129x_log, CONFIG_LOG_DEFAULT_LEVEL);*/
+LOG_MODULE_REGISTER(ads129x_log, LOG_LEVEL_INF);
+//LOG_MODULE_REGISTER(ads129x_log);
+#define ADS_CLK_PERIOD_US 30
+
 static void ads129x_drdy_init_callback(void);
 static void ads129x_drdy_callback_deinit(void);
 
 // start pin
-// #define START_NODE DT_NODELABEL(ads129x_start)
+#define START_NODE DT_NODELABEL(ads129x_start)
 #if defined(START_NODE)
 #define START_FLAGS DT_GPIO_FLAGS(START_NODE, gpios)
 #define START_PIN DT_GPIO_PIN(START_NODE, gpios)
@@ -161,6 +168,7 @@ static int ads129x_access(const struct device *_spi,
  */
 void ads129x_wakeup(void)
 {
+    LOG_DBG("CMD: Wakeup");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_WAKEUP, NULL, 0);
 }
 
@@ -169,6 +177,7 @@ void ads129x_wakeup(void)
  */
 void ads129x_standby(void)
 {
+    LOG_DBG("CMD: Standby");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_STANDBY, NULL, 0);
 }
 
@@ -177,6 +186,7 @@ void ads129x_standby(void)
  */
 void ads129x_reset(void)
 {
+    LOG_DBG("CMD: Reset");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RESET, NULL, 0);
     // must wait 18 tCLK cycles to execute this command (Datasheet, pg. 38)
     k_usleep(ADS129_SPI_CLOCK_DELAY * 5);
@@ -187,6 +197,7 @@ void ads129x_reset(void)
  */
 void ads129x_start(void)
 {
+    LOG_DBG("CMD: Start");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_START, NULL, 0);
     ads129x_drdy_init_callback();
 }
@@ -196,6 +207,7 @@ void ads129x_start(void)
  */
 void ads129x_stop()
 {
+    LOG_DBG("CMD: Stop");
     ads129x_drdy_callback_deinit();
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_STOP, NULL, 0);
 }
@@ -205,6 +217,7 @@ void ads129x_stop()
  */
 void ads129x_rdatac(void)
 {
+    LOG_DBG("CMD: Read Data Continuous");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATAC, NULL, 0);
 }
 
@@ -213,6 +226,7 @@ void ads129x_rdatac(void)
  */
 void ads129x_sdatac(void)
 {
+    LOG_DBG("CMD: Stop Read Data Continuous");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_SDATAC, NULL, 0);
 }
 
@@ -221,6 +235,7 @@ void ads129x_sdatac(void)
  */
 void ads129x_read_data(void)
 {
+    LOG_DBG("CMD: Read Data");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, ADS129X_data, ADS129x_DATA_BUFFER_SIZE);
 }
 
@@ -258,7 +273,7 @@ int ads129x_read_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
     // 001rrrrr; _RREG = 00100000 and _address = rrrrr
     uint8_t opcode1 = ADS129X_CMD_RREG | (_address & 0x1F);
     int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
-    printk("Read register ended with: %d\n", ret);
+    LOG_DBG("RR: %02X (%"PRIu8")", _address & 0x1F, _n);
 
     // unlock after successful operation
     ads129x_unlock_spi();
@@ -274,7 +289,33 @@ int ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
 {
     // 010wwwww; _WREG = 00100000 and _address = wwwww
     uint8_t opcode1 = ADS129X_CMD_WREG | (_address & 0x1F);
+    if (_n == 1) {
+        LOG_DBG("WR: %02X (data=%"PRIu8")", _address & 0x1F, *_value);
+    } else {
+        LOG_DBG("WR: %02X (n=%"PRIu8")", _address & 0x1F, _n);
+    }
     return ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
+}
+
+
+/**
+ * Write register at address _address.
+ * @param _address register address
+ * @param _value   register value
+ */
+int ads129x_safe_write_register(uint8_t _address, uint8_t _value)
+{
+    uint8_t tmp = 0xff;
+    ads129x_write_registers(_address, 1, &_value);
+    ads129x_read_registers(_address, 1, &tmp);
+
+    if (tmp != _value) {
+        LOG_ERR("WR: %02X (data=%"PRIu8")", _address & 0x1F, _value);
+        LOG_ERR("RR: %02X (data=%"PRIu8")", _address & 0x1F, tmp);
+        return -EIO;
+    } else {
+        return 0;
+    }
 }
 
 /**
@@ -289,12 +330,12 @@ int ads129x_get_device_id(uint8_t *dev_id)
 /* add gpio callbacks */
 bool ads129x_new_data = false;
 static struct gpio_callback drdy_cb_data;
+static struct spi_buf ads129x_rx_bufs[] = {{.buf = ADS129X_data, .len = ADS129x_DATA_BUFFER_SIZE}};
+static struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
+
 static void drdy_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    static struct spi_buf rx_bufs[] = {{.buf = ADS129X_data, .len = ADS129x_DATA_BUFFER_SIZE}};
-    static struct spi_buf_set rx = {.buffers = rx_bufs, .count = 1};
-
-    if (spi_read(ads129x_spi, &ads129x_spi_cfg, &rx) > 0) {
+    if (spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx) > 0) {
         ads129x_new_data = true;
     }
 }
@@ -419,20 +460,27 @@ void ads129x_init(void)
 
 void ads129x_setup(void)
 {
+    // Wait for 18 tCLKs AKA 30*18 microseconds
     ads129x_init();
     gpio_pin_set_dt(&reset_spec, 1);
-    k_msleep(100);
+    k_usleep(ADS_CLK_PERIOD_US*18);
+    gpio_pin_set_dt(&reset_spec, 0);
+    k_usleep(ADS_CLK_PERIOD_US*18);
+    gpio_pin_set_dt(&reset_spec, 1);
+    k_usleep(ADS_CLK_PERIOD_US*18);
 
-    // reset pulse
-    gpio_pin_toggle_dt(&reset_spec);
-    // Wait for 18 tCLKs AKA 9 microseconds, we use 1 millisec
-    k_msleep(1);
+    // device wakes up in RDATAC mode, so send stop signal
+    ads129x_sdatac();
+     // enable 32kHz sample-rate
+    ads129x_safe_write_register(ADS129X_REG_CONFIG1, ADS129X_SAMPLERATE_1024);
 
-    ads129x_sdatac(); // device wakes up in RDATAC mode, so send stop signal
-    uint8_t sample_rate = ADS129X_SAMPLERATE_1024;
-    ads129x_write_registers(ADS129X_REG_CONFIG1, 1, &sample_rate);
+     // enable internal reference
     uint8_t enable_internal_reference = (1 << ADS129X_BIT_PD_REFBUF) | (1 << 6);
-    ads129x_write_registers(ADS129X_REG_CONFIG3, 1, &enable_internal_reference);
+    ads129x_safe_write_register(ADS129X_REG_CONFIG3, enable_internal_reference);
+
+    uint8_t dev_id = 0;
+    ads129x_get_device_id(&dev_id);
+    printk("Device ID: %d\n", dev_id);
 
     // setup channels
     ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
@@ -442,11 +490,10 @@ void ads129x_setup(void)
         ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
     }
 
-    k_msleep(1);
-    ads129x_rdatac();
+    gpio_pin_set_dt(&start_spec, 0);
     ads129x_start();
 
-    uint8_t dev_id = 0;
-    ads129x_get_device_id(&dev_id);
-    printk("Device ID: %d\n", dev_id);
+    k_msleep(1);
+    ads129x_rdatac();
+    //ads129x_read_data();
 }
