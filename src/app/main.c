@@ -14,7 +14,9 @@
 void main(void)
 {
     app_usb_init();
+#ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
     ads129x_setup();
+#endif
     bt_init();
 
     printk("\n");

@@ -7,6 +7,10 @@
      status = "disabled";
 };
 
+&pwm0 {
+    status = "disabled";
+};
+
 &spi2 {
     status = "disabled";
 };
@@ -14,7 +18,7 @@
 
 
 &pinctrl {
-    spi3_default_alt: spi3_default_alt {
+    spi1_default_alt: spi1_default_alt {
         group1 {
             psels = <NRF_PSEL(SPIM_SCK, 1, 7)>,
                     <NRF_PSEL(SPIM_MOSI, 1, 6)>,
@@ -28,8 +32,9 @@ nrf53_spi: &spi1 {
     compatible = "nordic,nrf-spim";
     status = "okay";
     cs-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
-    pinctrl-0 = <&spi3_default_alt>;
+    pinctrl-0 = <&spi1_default_alt>;
     pinctrl-names = "default";
+    miso-pull-down;
 
 // ads129x_sensor_spi: ads129x_spi@0 {
 //     compatible = "spi-device";
@@ -38,6 +43,11 @@ nrf53_spi: &spi1 {
 //     label = "ads129x_spi";
 //     status = "okay";
 // };
+};
+
+&uart0 {
+	status = "okay";
+	current-speed = <921600>;
 };
 
 / {
@@ -69,24 +79,28 @@ nrf53_spi: &spi1 {
             <18 0 &gpio1 14 0>,	/* D12 */
             <19 0 &gpio1 15 0>,	/* D13 */
             /* GND */
-            <20 0 &gpio0 27 0>,   /* AREF */
-            <21 0 &gpio1 2 0>,	/* D15 */
-            <22 0 &gpio1 3 0>;	/* D16 */
+            <20 0 &gpio1 2 0>,	/* D15 */
+            <21 0 &gpio1 3 0>;	/* D16 */
     };
 
     intput_pins {
         compatible = "gpio-keys";
         ads129x_drdy: ads129x_drdy {
             gpios = <&arduino_header 20 GPIO_ACTIVE_HIGH>;
-            label = "Data ready indcator";
+            label = "ADS129X_DRDY_PIN";
         };
     };
 
     output_pins {
         compatible = "gpio-leds";
         ads129x_reset: ads129x_reset {
-            gpios = <&arduino_header 21 GPIO_ACTIVE_HIGH>;
-            label = "Reset";
+            gpios = <&arduino_header 18 GPIO_ACTIVE_HIGH>;
+            label = "ADS129X_RESET_PIN";
+        };
+
+        ads129x_start: ads129x_start {
+            gpios = <&arduino_header 19 GPIO_ACTIVE_HIGH>;
+            label = "ADS129X_START_PIN";
         };
     };
 };
