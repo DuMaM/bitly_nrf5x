@@ -16,21 +16,27 @@
  * Modified by Ferdinand Keil
  */
 
-#include <kernel.h>
-#include <device.h>
-#include <drivers/gpio.h>
-#include <drivers/sensor.h>
-#include <drivers/spi.h>
-#include <sys/printk.h>
-#include <zephyr.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/types.h>
+#include <zephyr/kernel.h>
+
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/spi.h>
+#include <zephyr/sys/printk.h>
 
 #include <spi_adc.h>
 
-#include <zephyr/logging/log.h>
+/* size of stack area used by each thread */
+#define STACKSIZE 1024
+/* scheduling priority used by each thread */
+#define PRIORITY 7
+K_SEM_DEFINE(ads129x_new_data, 0 , 1);
 
 /*LOG_MODULE_REGISTER(ads129x_log, CONFIG_LOG_DEFAULT_LEVEL);*/
 LOG_MODULE_REGISTER(ads129x_log, LOG_LEVEL_INF);
-//LOG_MODULE_REGISTER(ads129x_log);
+// LOG_MODULE_REGISTER(ads129x_log);
 #define ADS_CLK_PERIOD_US 30
 
 static void ads129x_drdy_init_callback(void);
@@ -107,7 +113,6 @@ struct spi_config ads129x_spi_cfg = {
 #define WRITE_BIT_VAL(var, bit, set) \
     ((var) = (set) ? ((var) | bit) : ((var) & ~bit))
 
-
 static int ads129x_access(const struct device *_spi,
                           struct spi_config *_spi_cfg,
                           uint8_t _cmd,
@@ -134,7 +139,7 @@ static int ads129x_access(const struct device *_spi,
             // get response after sending value number of regs
             {.buf = _data,
              .len = _len}};
-        struct spi_buf_set rx = {.buffers = rx_bufs, .count = sizeof(rx_bufs)/sizeof(rx_bufs[0])};
+        struct spi_buf_set rx = {.buffers = rx_bufs, .count = sizeof(rx_bufs) / sizeof(rx_bufs[0])};
         return spi_transceive(_spi, _spi_cfg, &tx, &rx);
     }
     else if (cmd & ADS129X_CMD_RREG)
@@ -274,7 +279,7 @@ int ads129x_read_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
     // 001rrrrr; _RREG = 00100000 and _address = rrrrr
     uint8_t opcode1 = ADS129X_CMD_RREG | (_address & 0x1F);
     int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
-    LOG_DBG("RR: %02X (%"PRIu8")", _address & 0x1F, _n);
+    LOG_DBG("RR: %02X (%" PRIu8 ")", _address & 0x1F, _n);
 
     // unlock after successful operation
     ads129x_unlock_spi();
@@ -290,14 +295,16 @@ int ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value)
 {
     // 010wwwww; _WREG = 00100000 and _address = wwwww
     uint8_t opcode1 = ADS129X_CMD_WREG | (_address & 0x1F);
-    if (_n == 1) {
-        LOG_DBG("WR: %02X (data=%"PRIu8")", _address & 0x1F, *_value);
-    } else {
-        LOG_DBG("WR: %02X (n=%"PRIu8")", _address & 0x1F, _n);
+    if (_n == 1)
+    {
+        LOG_DBG("WR: %02X (data=%" PRIu8 ")", _address & 0x1F, *_value);
+    }
+    else
+    {
+        LOG_DBG("WR: %02X (n=%" PRIu8 ")", _address & 0x1F, _n);
     }
     return ads129x_access(ads129x_spi, &ads129x_spi_cfg, opcode1, _value, _n);
 }
-
 
 /**
  * Write register at address _address.
@@ -310,11 +317,14 @@ int ads129x_safe_write_register(uint8_t _address, uint8_t _value)
     ads129x_write_registers(_address, 1, &_value);
     ads129x_read_registers(_address, 1, &tmp);
 
-    if (tmp != _value) {
-        LOG_ERR("WR: %02X (data=%"PRIu8")", _address & 0x1F, _value);
-        LOG_ERR("RR: %02X (data=%"PRIu8")", _address & 0x1F, tmp);
+    if (tmp != _value)
+    {
+        LOG_ERR("WR: %02X (data=%" PRIu8 ")", _address & 0x1F, _value);
+        LOG_ERR("RR: %02X (data=%" PRIu8 ")", _address & 0x1F, tmp);
         return -EIO;
-    } else {
+    }
+    else
+    {
         return 0;
     }
 }
@@ -329,16 +339,10 @@ int ads129x_get_device_id(uint8_t *dev_id)
 }
 
 /* add gpio callbacks */
-bool ads129x_new_data = false;
 static struct gpio_callback drdy_cb_data;
-static struct spi_buf ads129x_rx_bufs[] = {{.buf = ADS129X_data, .len = ADS129x_DATA_BUFFER_SIZE}};
-static struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
-
 static void drdy_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    if (spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx) > 0) {
-        ads129x_new_data = true;
-    }
+    k_sem_give(&ads129x_new_data);
 }
 
 static void ads129x_drdy_init_callback(void)
@@ -369,33 +373,6 @@ void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uin
     uint8_t value = ((_powerDown & 1) << 7) | ((_gain & 7) << 4) | (_mux & 7);
     ads129x_write_registers(ADS129X_REG_CH1SET + (_channel - 1), 1, &value);
 }
-
-// struct {
-//     uint8_t ini_test;
-// } config2;
-
-// int spi_adc_init(void);
-// int spi_adc_write_to_reg(uint8_t reg, uint8_t value);
-// int spi_adc_set_test_signal(int amp, int freq, bool external)
-// {
-//     if (amp < 0 || amp > 255)
-//         return -1;
-
-//     if (amp > 0) {
-//         spi_adc_write_to_reg(REG_TEST_AMP, amp);
-//     }
-
-//     if (freq < 0 || freq > 255)
-//         return -1;
-
-//     if (freq > 0) {
-//         spi_adc_write_to_reg(REG_TEST_FREQ, freq);
-//     }
-
-//     if (external) {
-//         spi_adc_write_to_reg(REG_CONFIG2, MUX_TEST_SIGNAL);
-//     }
-// }
 
 /**
  * Initializes ADS129x library.
@@ -464,18 +441,18 @@ void ads129x_setup(void)
     // Wait for 18 tCLKs AKA 30*18 microseconds
     ads129x_init();
     gpio_pin_set_dt(&reset_spec, 1);
-    k_usleep(ADS_CLK_PERIOD_US*18);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
     gpio_pin_set_dt(&reset_spec, 0);
-    k_usleep(ADS_CLK_PERIOD_US*18);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
     gpio_pin_set_dt(&reset_spec, 1);
-    k_usleep(ADS_CLK_PERIOD_US*18);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
 
     // device wakes up in RDATAC mode, so send stop signal
     ads129x_sdatac();
-     // enable 32kHz sample-rate
+    // enable 32kHz sample-rate
     ads129x_safe_write_register(ADS129X_REG_CONFIG1, ADS129X_SAMPLERATE_1024);
 
-     // enable internal reference
+    // enable internal reference
     uint8_t enable_internal_reference = (1 << ADS129X_BIT_PD_REFBUF) | (1 << 6);
     ads129x_safe_write_register(ADS129X_REG_CONFIG3, enable_internal_reference);
 
@@ -496,6 +473,42 @@ void ads129x_setup(void)
 
     k_msleep(1);
     ads129x_rdatac();
-    //ads129x_read_data();
 }
+
+void ads129x_main_thread(void)
+{
+    ads129x_setup();
+
+    struct spi_buf ads129x_rx_bufs[] = {{.buf = ADS129X_data, .len = ADS129x_DATA_BUFFER_SIZE}};
+    struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
+
+    for (;;)
+    {
+
+        //unsigned int key = irq_lock();
+
+        /*
+         * Wait for semaphore from ISR; if acquired, do related work, then
+         * go to next loop iteration (the semaphore might have been given
+         * again); else, make the CPU idle.
+         */
+
+        if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0)
+        {
+           // irq_unlock(key);
+
+            /* ... do processing */
+            spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
+        }
+        else
+        {
+            /* put CPU to sleep to save power */
+           // k_cpu_atomic_idle(key);
+            k_usleep(100);
+        }
+    }
+}
+
+K_THREAD_DEFINE(ads129x_th, STACKSIZE, ads129x_main_thread, NULL, NULL, NULL, PRIORITY, K_ESSENTIAL, 0);
+
 #endif

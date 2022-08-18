@@ -50,6 +50,10 @@ nrf53_spi: &spi1 {
 	current-speed = <921600>;
 };
 
+&qspi0 {
+    status = "disabled";
+};
+
 / {
     arduino_header: connector {
         compatible = "arduino-header-r3";
@@ -103,5 +107,20 @@ nrf53_spi: &spi1 {
             label = "ADS129X_START_PIN";
         };
     };
+
+    buttons {
+		button0: button_0 {
+            status = "disabled";
+		};
+		button1: button_1 {
+            status = "disabled";
+		};
+		button2: button_2 {
+            status = "disabled";
+		};
+		button3: button_3 {
+            status = "disabled";
+		};
+	};
 };
 
