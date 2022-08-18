@@ -15,7 +15,7 @@
 #define STACKSIZE 1024
 
 /* scheduling priority used by each thread */
-#define PRIORITY 8
+#define PRIORITY 10
 
 #define LED0_NODE DT_ALIAS(led0)
 #define LED1_NODE DT_ALIAS(led1)

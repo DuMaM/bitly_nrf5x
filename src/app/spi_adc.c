@@ -31,7 +31,7 @@
 /* size of stack area used by each thread */
 #define STACKSIZE 1024
 /* scheduling priority used by each thread */
-#define PRIORITY 7
+#define PRIORITY 8
 K_SEM_DEFINE(ads129x_new_data, 0 , 1);
 
 /*LOG_MODULE_REGISTER(ads129x_log, CONFIG_LOG_DEFAULT_LEVEL);*/
