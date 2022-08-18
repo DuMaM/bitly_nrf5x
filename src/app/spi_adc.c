@@ -484,27 +484,24 @@ void ads129x_main_thread(void)
 
     for (;;)
     {
-
-        //unsigned int key = irq_lock();
-
         /*
          * Wait for semaphore from ISR; if acquired, do related work, then
          * go to next loop iteration (the semaphore might have been given
          * again); else, make the CPU idle.
          */
-
+        unsigned int key = irq_lock();
         if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0)
         {
-           // irq_unlock(key);
+            irq_unlock(key);
 
-            /* ... do processing */
+            /* do processing */
             spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
         }
         else
         {
             /* put CPU to sleep to save power */
-           // k_cpu_atomic_idle(key);
-            k_usleep(100);
+            k_cpu_atomic_idle(key);
+            //k_usleep(100);
         }
     }
 }
