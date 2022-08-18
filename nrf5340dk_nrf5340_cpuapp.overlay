@@ -4,7 +4,7 @@
 };
 
 &i2c1 {
-     status = "disabled";
+    status = "disabled";
 };
 
 &pwm0 {
@@ -15,7 +15,9 @@
     status = "disabled";
 };
 
-
+&qspi {
+    status = "disabled";
+};
 
 &pinctrl {
     spi1_default_alt: spi1_default_alt {
@@ -43,11 +45,6 @@ nrf53_spi: &spi1 {
 //     label = "ads129x_spi";
 //     status = "okay";
 // };
-};
-
-&uart0 {
-	status = "okay";
-	current-speed = <921600>;
 };
 
 / {
@@ -101,6 +98,29 @@ nrf53_spi: &spi1 {
         ads129x_start: ads129x_start {
             gpios = <&arduino_header 19 GPIO_ACTIVE_HIGH>;
             label = "ADS129X_START_PIN";
+        };
+    };
+
+    /* disable other resources */
+    pwmleds {
+        compatible = "pwm-leds";
+        pwm_led0: pwm_led_0 {
+            status = "disabled";
+        };
+    };
+
+    buttons {
+        button0: button_0 {
+            status = "disabled";
+        };
+        button1: button_1 {
+            status = "disabled";
+        };
+        button2: button_2 {
+            status = "disabled";
+        };
+        button3: button_3 {
+            status = "disabled";
         };
     };
 };

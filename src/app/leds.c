@@ -15,7 +15,7 @@
 #define STACKSIZE 1024
 
 /* scheduling priority used by each thread */
-#define PRIORITY 7
+#define PRIORITY 10
 
 #define LED0_NODE DT_ALIAS(led0)
 #define LED1_NODE DT_ALIAS(led1)
@@ -93,6 +93,6 @@ void blink_th(void *ledx)
     blink(ledx, LED_BLINK_SLEEP_MS);
 }
 
-K_THREAD_DEFINE(blink1_id, STACKSIZE, blink_th, &led1, NULL, NULL, PRIORITY, 0, LED1_BLINK_OFFSET_MS);
-K_THREAD_DEFINE(blink2_id, STACKSIZE, blink_th, &led2, NULL, NULL, PRIORITY, 0, LED2_BLINK_OFFSET_MS);
-K_THREAD_DEFINE(blink3_id, STACKSIZE, blink_th, &led3, NULL, NULL, PRIORITY, 0, LED3_BLINK_OFFSET_MS);
+K_THREAD_DEFINE(blink1_th, STACKSIZE, blink_th, &led1, NULL, NULL, PRIORITY, 0, LED1_BLINK_OFFSET_MS);
+K_THREAD_DEFINE(blink2_th, STACKSIZE, blink_th, &led2, NULL, NULL, PRIORITY, 0, LED2_BLINK_OFFSET_MS);
+K_THREAD_DEFINE(blink3_th, STACKSIZE, blink_th, &led3, NULL, NULL, PRIORITY, 0, LED3_BLINK_OFFSET_MS);
