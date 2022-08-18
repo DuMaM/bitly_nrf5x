@@ -63,6 +63,7 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 #define ADS129_SPI_STATUS_WORD_SIZE 3
 #define ADS129x_DATA_BUFFER_SIZE (8 * 3 + ADS129_SPI_STATUS_WORD_SIZE)
 
+#ifdef SPI_NODE
 uint8_t ADS129X_data[ADS129x_DATA_BUFFER_SIZE];
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
@@ -497,3 +498,4 @@ void ads129x_setup(void)
     ads129x_rdatac();
     //ads129x_read_data();
 }
+#endif
