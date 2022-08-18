@@ -477,7 +477,7 @@ void bt_init(void)
         .le_phy_updated = le_phy_updated,
         .le_data_len_updated = le_data_length_updated };
 
-    printk("Starting Bluetooth Performance test example\n");
+    printk("Starting Bluetooth Performance test\n");
 
     err = bt_enable(NULL);
     if (err)
