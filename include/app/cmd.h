@@ -1,13 +1,12 @@
 #ifndef _CMD_H_
 #define _CMD_H_
 
-#include <bluetooth/conn.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/types.h>
+#include <zephyr/sys/printk.h>
 
 #include <errno.h>
-#include <shell/shell.h>
-#include <zephyr/types.h>
-#include <sys/printk.h>
-
 #include <stdlib.h>
 
 #define INTERVAL_MIN 0x140 /* 320 units, 400 ms */

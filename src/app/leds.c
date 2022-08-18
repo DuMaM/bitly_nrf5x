@@ -5,10 +5,10 @@
  */
 
 #include <zephyr.h>
-#include <device.h>
-#include <drivers/gpio.h>
-#include <sys/printk.h>
-#include <sys/__assert.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/__assert.h>
 #include <string.h>
 
 /* size of stack area used by each thread */

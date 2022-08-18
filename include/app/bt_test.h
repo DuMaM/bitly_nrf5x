@@ -1,7 +1,7 @@
 #ifndef _BT_TEST_H_
 #define _BT_TEST_H_
 
-#include <shell/shell.h>
+#include <zephyr/shell/shell.h>
 
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)

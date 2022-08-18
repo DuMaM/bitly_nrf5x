@@ -25,15 +25,17 @@
  * to the serial port.
  */
 
-#include <app_usb.h>
-#include <stdio.h>
 #include <string.h>
-#include <device.h>
+#include <stdio.h>
+
 #include <zephyr.h>
+#include <zephyr/device.h>
+#include <zephyr/usb/usb_device.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/drivers/uart.h>
+
 #include <nrfx.h>
-#include <usb/usb_device.h>
-#include <sys/printk.h>
-#include <drivers/uart.h>
+#include <app_usb.h>
 
 void app_usb_init(void)
 {

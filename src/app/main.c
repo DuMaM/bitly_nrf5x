@@ -8,7 +8,7 @@
 #include <cmd.h>
 #include <bt_test.h>
 
-#include <sys/printk.h>
+#include <zephyr/sys/printk.h>
 
 void main(void)
 {

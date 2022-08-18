@@ -1,14 +1,14 @@
 #include <zephyr/types.h>
-#include <sys/byteorder.h>
-#include <sys/printk.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/printk.h>
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/crypto.h>
-#include <bluetooth/conn.h>
-#include <bluetooth/gatt.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/uuid.h>
-#include <performance_test.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/crypto.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/uuid.h>
+
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
 
@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <performance_test.h>
 #include <bt_test.h>
 #include <cmd.h>
 

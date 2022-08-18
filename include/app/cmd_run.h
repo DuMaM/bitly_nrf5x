@@ -1,8 +1,8 @@
 #ifndef _CMD_RUN_H_
 #define _CMD_RUN_H_
 
-#include <shell/shell.h>
-#include <bluetooth/conn.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/bluetooth/conn.h>
 #include <performance_test.h>
 
 int test_init(const struct shell *shell,
