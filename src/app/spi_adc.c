@@ -28,17 +28,17 @@
 
 #include <spi_adc.h>
 
+#ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
+
 /* size of stack area used by each thread */
 #define STACKSIZE 1024
 /* scheduling priority used by each thread */
 #define PRIORITY 8
-K_SEM_DEFINE(ads129x_new_data, 0 , 1);
+K_SEM_DEFINE(ads129x_new_data, 0, 1);
+static bool ads129x_print_data = false;
 
-/*LOG_MODULE_REGISTER(ads129x_log, CONFIG_LOG_DEFAULT_LEVEL);*/
 LOG_MODULE_REGISTER(ads129x_log, LOG_LEVEL_INF);
-// LOG_MODULE_REGISTER(ads129x_log);
 #define ADS_CLK_PERIOD_US 30
-
 static void ads129x_drdy_init_callback(void);
 static void ads129x_drdy_callback_deinit(void);
 
@@ -69,7 +69,6 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 #define ADS129_SPI_STATUS_WORD_SIZE 3
 #define ADS129x_DATA_BUFFER_SIZE (8 * 3 + ADS129_SPI_STATUS_WORD_SIZE)
 
-#ifdef SPI_NODE
 uint8_t ADS129X_data[ADS129x_DATA_BUFFER_SIZE];
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
@@ -374,6 +373,33 @@ void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uin
     ads129x_write_registers(ADS129X_REG_CH1SET + (_channel - 1), 1, &value);
 }
 
+void ads129x_print(bool _print)
+{
+    ads129x_print_data = _print;
+}
+
+#define ADS129X_DATA_LENGTH 9
+void ads129x_dump_data()
+{
+    static uint32_t data[ADS129X_DATA_LENGTH];
+    static char print_buf[ADS129X_DATA_LENGTH * 4 + 1];
+
+    if (ads129x_print_data)
+    {
+        uint8_t print_buf_pos = 0;
+        memset(data, 0, sizeof(data));
+
+        for (int i = 0; i < ADS129X_DATA_LENGTH; i++)
+        {
+            data[i] = ADS129X_data[i + 0] << 16;
+            data[i] = ADS129X_data[i + 1] << 8;
+            data[i] = ADS129X_data[i + 2];
+            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%" PRIu32 " ", data[i]);
+        }
+        LOG_INF("Data: %s", print_buf);
+    }
+}
+
 /**
  * Initializes ADS129x library.
  */
@@ -381,10 +407,10 @@ void ads129x_init(void)
 {
     // SPI Setup
     int ret;
-    printk("SPI init\n");
+    LOG_INF("ASD129x spi init\n");
     if (!device_is_ready(ads129x_spi))
     {
-        printk("SPI device %s is not ready\n", ads129x_spi->name);
+        LOG_ERR("SPI device %s is not ready\n", ads129x_spi->name);
         return;
     }
 
@@ -392,14 +418,14 @@ void ads129x_init(void)
 #ifdef DRDY_NODE
     if (!device_is_ready(drdy_spec.port))
     {
-        printk("Error: %s device is not ready\n", drdy_spec.port->name);
+        LOG_ERR("Error: %s device is not ready\n", drdy_spec.port->name);
         return;
     }
 
     ret = gpio_pin_configure_dt(&drdy_spec, GPIO_INPUT);
     if (ret != 0)
     {
-        printk("Error %d: failed to configure pin %d (DRDY)\n", ret, drdy_spec.pin);
+        LOG_ERR("Error %d: failed to configure pin %d (DRDY)\n", ret, drdy_spec.pin);
         return;
     }
 #endif
@@ -407,14 +433,14 @@ void ads129x_init(void)
 #ifdef RESET_NODE
     if (!device_is_ready(reset_spec.port))
     {
-        printk("Error: %s device is not ready\n", reset_spec.port->name);
+        LOG_ERR("Error: %s device is not ready\n", reset_spec.port->name);
         return;
     }
 
     ret = gpio_pin_configure_dt(&reset_spec, GPIO_OUTPUT);
     if (ret != 0)
     {
-        printk("Error %d: failed to configure pin %d (RESET)\n", ret, reset_spec.pin);
+        LOG_ERR("Error %d: failed to configure pin %d (RESET)\n", ret, reset_spec.pin);
         return;
     }
 #endif
@@ -422,19 +448,20 @@ void ads129x_init(void)
 #ifdef START_NODE
     if (!device_is_ready(start_spec.port))
     {
-        printk("Error: %s device is not ready\n", start_spec.port->name);
+        LOG_ERR("Error: %s device is not ready\n", start_spec.port->name);
         return;
     }
 
     ret = gpio_pin_configure_dt(&start_spec, GPIO_OUTPUT);
     if (ret != 0)
     {
-        printk("Error %d: failed to configure pin %d (START)\n", ret, start_spec.pin);
+        LOG_ERR("Error %d: failed to configure pin %d (START)\n", ret, start_spec.pin);
         return;
     }
 
 #endif
 }
+
 
 void ads129x_setup(void)
 {
@@ -469,10 +496,6 @@ void ads129x_setup(void)
     }
 
     gpio_pin_set_dt(&start_spec, 0);
-    ads129x_start();
-
-    k_msleep(1);
-    ads129x_rdatac();
 }
 
 void ads129x_main_thread(void)
@@ -495,7 +518,10 @@ void ads129x_main_thread(void)
             irq_unlock(key);
 
             /* do processing */
-            spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
+            int ret = spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
+            if (!ret) {
+                ads129x_dump_data();
+            }
         }
         else
         {

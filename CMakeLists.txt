@@ -32,3 +32,8 @@ include_directories("include/app")
 
 
 zephyr_library_include_directories(${ZEPHYR_BASE}/samples/bluetooth)
+# add_child_image(
+#    NAME hci_rpmsg
+#    SOURCE_DIR ${ZEPHYR_BASE}/samples/bluetooth/hci_rpmsg
+#    DOMAIN CPUNET
+#    )
