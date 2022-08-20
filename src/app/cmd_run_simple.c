@@ -2,6 +2,8 @@
 #include <cmd.h>
 
 #include <bt_test.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/sys/printk.h>
 
 #include <performance_test.h>
 #include "img_file.h"
@@ -9,6 +11,8 @@
 extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
+
+LOG_MODULE_DECLARE(main);
 
 int test_run(const struct shell *shell,
              const struct bt_le_conn_param *conn_param,
@@ -24,7 +28,7 @@ int test_run(const struct shell *shell,
     err = test_init(shell, conn_param, phy, data_len, BT_TEST_TYPE_SIMPLE);
     if (err)
     {
-        shell_error(shell, "GATT read failed (err %d)", err);
+        LOG_ERR("GATT read failed (err %d)", err);
         return err;
     }
 
@@ -35,7 +39,7 @@ int test_run(const struct shell *shell,
         err = bt_performance_test_write(&performance_test, test_data_buffer, test_data_buffer_size);
         if (err)
         {
-            shell_error(shell, "GATT write failed (err %d)", err);
+            LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
 
@@ -47,14 +51,14 @@ int test_run(const struct shell *shell,
 
     delta = k_uptime_delta(&stamp);
 
-    shell_print(shell, "\nDone\n");
-    shell_print(shell, "[local] sent %u bytes (%u KB) in %lld ms at %llu kbps\n", data, data / 1024, delta, ((uint64_t)data * 8 / delta));
+    LOG_INF("\nDone");
+    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 
     /* read back char from peer */
     err = bt_performance_test_read(&performance_test);
     if (err)
     {
-        shell_error(shell, "GATT read failed (err %d)", err);
+        LOG_ERR("GATT read failed (err %d)", err);
         return err;
     }
 

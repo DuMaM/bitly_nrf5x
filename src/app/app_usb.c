@@ -31,38 +31,44 @@
 #include <zephyr.h>
 #include <zephyr/device.h>
 #include <zephyr/usb/usb_device.h>
-#include <zephyr/sys/printk.h>
 #include <zephyr/drivers/uart.h>
 
 #include <nrfx.h>
 #include <app_usb.h>
 
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_DECLARE(main);
+
+#ifdef CONFIG_BOARD_PARTICLE_XENON
+
+
 void app_usb_init(void)
 {
-#ifdef CONFIG_BOARD_PARTICLE_XENON
     int ret = 0;
-
 
     ret = usb_enable(NULL);
     if (ret != 0)
     {
-        printk("Failed to enable USB\n");
+        LOG_ERR("Failed to enable USB");
         return;
     }
 
     while (!device_is_ready(DEVICE_DT_GET(DT_CHOSEN(zephyr_console))))
     {
         k_sleep(K_MSEC(100));
-        printk("CDC ACM device for console is not ready\n");
+        LOG_ERR("CDC ACM device for console is not ready");
     }
 
     while (!device_is_ready(DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart))))
     {
         k_sleep(K_MSEC(100));
-        printk("CDC ACM device for shell is not ready\n");
+        LOG_ERR("CDC ACM device for shell is not ready");
     }
 
-    printk("Usb CDC ACM successfully enabled\n");
-#endif
+    LOG_INF("Usb CDC ACM successfully enabled");
 
 }
+#else
+void app_usb_init(void) {}
+#endif
