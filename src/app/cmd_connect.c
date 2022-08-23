@@ -4,7 +4,7 @@
 // add connect command
 static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv)
 {
-    shell_print(shell, "\nSlave role. Starting advertising\n");
+    shell_print(shell, "\nSlave role.\n");
     adv_start();
 
     return 0;
@@ -13,7 +13,7 @@ static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv
 static int set_role_to_master(const struct shell *shell, size_t argc, char **argv)
 {
     restore_state();
-    shell_print(shell, "\nMaster role. Starting scanning\n");
+    shell_print(shell, "\nMaster role.\n");
     scan_start();
 
     return 0;

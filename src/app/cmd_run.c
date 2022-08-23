@@ -5,6 +5,7 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/logging/log.h>
 
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
@@ -14,11 +15,12 @@
 #include <cmd_run.h>
 #include <bt_test.h>
 
+LOG_MODULE_DECLARE(main);
+
 extern struct bt_conn *default_conn;
 /* a test_data_buffer data buffer */
 uint8_t test_data_buffer[240];
 const uint16_t test_data_buffer_size = sizeof(test_data_buffer) / sizeof(test_data_buffer[0]);
-
 
 static void get_rssi_power(struct bt_conn *conn)
 {
@@ -28,7 +30,7 @@ static void get_rssi_power(struct bt_conn *conn)
 
     if (err)
     {
-        printk("No connection handle (err %d)\n", err);
+        LOG_ERR("No connection handle (err %d)", err);
         return;
     }
 
@@ -40,7 +42,7 @@ static void get_rssi_power(struct bt_conn *conn)
     buf = bt_hci_cmd_create(BT_HCI_OP_READ_RSSI, sizeof(*cp));
     if (!buf)
     {
-        printk("Cannot allocate buffer to get RSSI power\n");
+        LOG_ERR("Cannot allocate buffer to get RSSI power");
         return;
     }
 
@@ -50,12 +52,12 @@ static void get_rssi_power(struct bt_conn *conn)
     err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_RSSI, buf, &rsp);
     if (err)
     {
-        printk("Get rssi power value (err: %d)\n", err);
+        LOG_ERR("Get rssi power value (err: %d)", err);
     }
     else
     {
         rp = (struct bt_hci_rp_read_rssi *)(rsp->data);
-        printk("RSSI power returned by command: %" PRId8 "\n", rp->rssi);
+        LOG_INF("RSSI power returned by command: %" PRId8, rp->rssi);
     }
 
     if (rsp)
@@ -70,17 +72,13 @@ static void get_tx_power(struct bt_conn *conn)
     int error = bt_conn_le_get_tx_power_level(conn, &tx_power);
     if (!error)
     {
-        printk("TX power returned by command: %" PRId8 "\n", tx_power.current_level);
+        LOG_INF("TX power returned by command: %" PRId8, tx_power.current_level);
     }
 }
 
 static uint8_t performance_test_read(const struct bt_performance_test_metrics *met)
 {
-    printk("[peer] received %u bytes (%u KB) in %u GATT writes at %u bps\n",
-           met->write_len, met->write_len / 1024, met->write_count,
-           met->write_rate);
-
-
+    LOG_INF("[peer] received %u bytes (%u KB) in %u GATT writes at %u bps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate);
     k_sem_give(&performance_test_sem);
 
     return BT_GATT_ITER_STOP;
@@ -123,10 +121,7 @@ static void performance_test_received(const struct bt_performance_test_metrics *
 
 static void performance_test_send(const struct bt_performance_test_metrics *met)
 {
-    printk("\n[local] received %u bytes (%u KB)"
-           " in %u GATT writes at %u bps\n",
-           met->write_len, met->write_len / 1024,
-           met->write_count, met->write_rate);
+    LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u bps",met->write_len, met->write_len / 1024, met->write_count, met->write_rate);
 }
 
 const struct bt_performance_test_cb performance_test_cb = {
@@ -176,7 +171,6 @@ int test_init(const struct shell *shell,
     k_sleep(K_MSEC(500));
     return 0;
 }
-
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_bt_test,
                                SHELL_CMD(ber_alt, NULL, "Tests ber signal with pattern |11|00|11|00", test_run_ber_alternating_cmd),

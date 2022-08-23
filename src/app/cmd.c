@@ -8,7 +8,7 @@
 #include <bt_test.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(main);
+LOG_MODULE_DECLARE(main);
 
 int default_cmd(const struct shell *shell, size_t argc, char **argv)
 {

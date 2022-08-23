@@ -34,6 +34,7 @@ static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTE
 struct bt_performance_test performance_test;
 extern const struct bt_performance_test_cb performance_test_cb;
 
+
 struct bt_conn *getSettings(void)
 {
     return default_conn;
@@ -144,8 +145,12 @@ void scan_start(void)
     if (err)
     {
         LOG_ERR("Starting scanning failed (err %d)", err);
-        return;
     }
+    else
+    {
+        LOG_INF("Scanning started");
+    }
+    return;
 }
 
 void adv_start(void)
@@ -157,17 +162,16 @@ void adv_start(void)
                         NULL);
     int err;
 
-    err = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd,
-                          ARRAY_SIZE(sd));
+    err = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err)
     {
         LOG_ERR("Failed to start advertiser (%d)", err);
-        return;
     }
     else
     {
         LOG_ERR("Start advertiser (%d)", ad->type);
     }
+    return;
 }
 
 /**

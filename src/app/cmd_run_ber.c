@@ -85,7 +85,7 @@ int test_run_ber(const struct shell *shell,
     shell_print(shell, "Done");
     shell_print(shell, "[local] sent %"PRIi64" bytes (%"PRIi64" KB) in %"PRIi64" ms at %"PRIu64" kbps", data, data / 1024, delta, ((data * 8) / delta));
 
-    /* read back char from peer */
+    /* read back char from peer and wait to finish it */
     err = bt_performance_test_read(&performance_test);
     if (err)
     {
