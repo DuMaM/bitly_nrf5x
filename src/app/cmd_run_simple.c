@@ -14,6 +14,16 @@ extern uint16_t test_data_buffer_size;
 
 LOG_MODULE_DECLARE(main);
 
+void print_2d_array(uint8_t *num, uint8_t size)
+{
+    int counter = 0;
+    while (counter++ < size)
+    {
+        printk("%c", *num);
+        num++;
+    }
+}
+
 int test_run(const struct shell *shell,
              const struct bt_le_conn_param *conn_param,
              const struct bt_conn_le_phy_param *phy,
@@ -34,24 +44,39 @@ int test_run(const struct shell *shell,
 
     /* get cycle stamp */
     stamp = k_uptime_get_32();
+    uint8_t buffer_size = test_data_buffer_size;
+    uint8_t *img_prt = NULL;
     while (prog < IMG_SIZE)
     {
-        err = bt_performance_test_write(&performance_test, test_data_buffer, test_data_buffer_size);
+        img_prt = ((uint8_t *)img) + prog;
+        if (IMG_SIZE - prog > test_data_buffer_size)
+        {
+            buffer_size = test_data_buffer_size;
+        }
+        else
+        {
+            buffer_size = IMG_SIZE - prog;
+        }
+
+        err = bt_performance_test_write(&performance_test, img_prt, buffer_size);
         if (err)
         {
             LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
 
-        /* print graphics */
-        printk("%c", img[prog / IMG_X][prog % IMG_X]);
-        data += test_data_buffer_size;
-        prog++;
+        print_2d_array(img_prt, buffer_size);
+
+        img_prt += prog;
+        prog += buffer_size;
+        data += buffer_size;
+
+
     }
 
     delta = k_uptime_delta(&stamp);
 
-    LOG_INF("\nDone");
+    LOG_INF("Done");
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 
     /* read back char from peer */
