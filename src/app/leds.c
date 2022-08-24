@@ -12,7 +12,7 @@
 #include <string.h>
 
 /* size of stack area used by each thread */
-#define STACKSIZE 1024
+#define STACKSIZE 256
 
 /* scheduling priority used by each thread */
 #define PRIORITY 10

@@ -70,8 +70,6 @@ int test_run(const struct shell *shell,
         img_prt += prog;
         prog += buffer_size;
         data += buffer_size;
-
-
     }
 
     delta = k_uptime_delta(&stamp);

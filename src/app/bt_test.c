@@ -1,4 +1,5 @@
 #include <zephyr/types.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -24,7 +25,6 @@ LOG_MODULE_DECLARE(main);
 
 K_SEM_DEFINE(performance_test_sem, 0, 1);
 
-static volatile bool data_length_req;
 static volatile bool test_ready;
 struct bt_conn *default_conn;
 static struct bt_uuid *uuid128 = BT_UUID_PERF_TEST;
@@ -33,7 +33,6 @@ static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTE
 
 struct bt_performance_test performance_test;
 extern const struct bt_performance_test_cb performance_test_cb;
-
 
 struct bt_conn *getSettings(void)
 {
@@ -224,18 +223,6 @@ static void discovery_complete(struct bt_gatt_dm *dm,
     bt_gatt_dm_data_print(dm);
     bt_performance_test_handles_assign(dm, performance_test);
     bt_gatt_dm_data_release(dm);
-
-    exchange_params.func = exchange_func;
-
-    err = bt_gatt_exchange_mtu(default_conn, &exchange_params);
-    if (err)
-    {
-        LOG_INF("MTU exchange failed (err %d)", err);
-    }
-    else
-    {
-        LOG_INF("MTU exchange pending");
-    }
 }
 
 static void discovery_service_not_found(struct bt_conn *conn,
@@ -307,6 +294,17 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
             LOG_ERR("Discover failed (err %d)", err);
         }
     }
+
+    exchange_params.func = exchange_func;
+    err = bt_gatt_exchange_mtu(default_conn, &exchange_params);
+    if (err)
+    {
+        LOG_INF("MTU exchange failed (err %d)", err);
+    }
+    else
+    {
+        LOG_INF("MTU exchange pending");
+    }
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -331,7 +329,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
     }
 }
 
-void restore_state()
+void restore_state(void)
 {
     test_ready = false;
     if (default_conn)
@@ -359,8 +357,8 @@ static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
 static void le_param_updated(struct bt_conn *conn, uint16_t interval,
                              uint16_t latency, uint16_t timeout)
 {
-    LOG_INF("Connection parameters updated."
-            " interval: %d (%d ms), latency: %d, timeout: %d",
+    LOG_INF("Connection parameters updated");
+    LOG_INF("Interval: %d (%d ms), latency: %d, timeout: %d",
             interval, (uint32_t)(interval * UNIT_SCALER), latency, timeout);
 
     k_sem_give(&performance_test_sem);
@@ -377,18 +375,43 @@ static void le_phy_updated(struct bt_conn *conn,
 static void le_data_length_updated(struct bt_conn *conn,
                                    struct bt_conn_le_data_len_info *info)
 {
-    if (!data_length_req)
+    LOG_INF("LE data len updated: TX (len: %d time: %d) RX (len: %d time: %d)",
+            info->tx_max_len,
+            info->tx_max_time,
+            info->rx_max_len,
+            info->rx_max_time);
+
+    k_sem_give(&performance_test_sem);
+}
+
+K_THREAD_STACK_DEFINE(bt_conf_thread_area, 512);
+void connection_config_update(void *phy, void *data_len, void *conn_param)
+{
+
+    int err = 0;
+    LOG_INF("PHY update pending");
+    err = bt_conn_le_phy_update(default_conn, phy);
+    if (err)
     {
+        LOG_ERR("PHY update failed: %d", err);
         return;
     }
 
-    LOG_INF("LE data len updated: TX (len: %d time: %d)"
-            " RX (len: %d time: %d)",
-            info->tx_max_len,
-            info->tx_max_time, info->rx_max_len, info->rx_max_time);
+    LOG_INF("LE Data length update pending");
+    err = bt_conn_le_data_len_update(default_conn, data_len);
+    if (err)
+    {
+        LOG_ERR("LE data length update failed: %d", err);
+        return;
+    }
 
-    data_length_req = false;
-    k_sem_give(&performance_test_sem);
+    LOG_INF("Connection parameters update pending");
+    err = bt_conn_le_param_update(default_conn, conn_param);
+    if (err)
+    {
+        LOG_ERR("Connection parameters update failed: %d", err);
+        return;
+    }
 }
 
 int connection_configuration_set(const struct shell *shell,
@@ -411,59 +434,39 @@ int connection_configuration_set(const struct shell *shell,
         LOG_ERR("'run' command shall be executed only on the master board");
     }
 
-    err = bt_conn_le_phy_update(default_conn, phy);
-    if (err)
-    {
-        LOG_ERR("PHY update failed: %d", err);
-        return err;
-    }
+    /* to fix race conditions spawn thread which will */
+    struct k_thread bt_conf_thread;
+    k_thread_create(&bt_conf_thread, bt_conf_thread_area,
+                    K_THREAD_STACK_SIZEOF(bt_conf_thread_area),
+                    connection_config_update,
+                    (void *)phy, (void *)data_len, (void *)conn_param,
+                    7, 0, K_NO_WAIT);
 
-    LOG_INF("PHY update pending");
     err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
     if (err)
     {
         LOG_ERR("PHY update timeout");
+        k_thread_join(&bt_conf_thread, K_MSEC(100));
         return err;
     }
 
-    if (info.le.data_len->tx_max_len != data_len->tx_max_len)
+    err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
+    if (err)
     {
-        data_length_req = true;
-
-        err = bt_conn_le_data_len_update(default_conn, data_len);
-        if (err)
-        {
-            LOG_ERR("LE data length update failed: %d", err);
-            return err;
-        }
-
-        LOG_INF("LE Data length update pending");
-        err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
-        if (err)
-        {
-            LOG_ERR("LE Data Length update timeout");
-            return err;
-        }
+        LOG_ERR("LE Data Length update timeout");
+        k_thread_join(&bt_conf_thread, K_MSEC(100));
+        return err;
     }
 
-    if (info.le.interval != conn_param->interval_max)
+    err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
+    if (err)
     {
-        err = bt_conn_le_param_update(default_conn, conn_param);
-        if (err)
-        {
-            LOG_ERR("Connection parameters update failed: %d", err);
-            return err;
-        }
-
-        LOG_INF("Connection parameters update pending");
-        err = k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
-        if (err)
-        {
-            LOG_ERR("Connection parameters update timeout");
-            return err;
-        }
+        LOG_ERR("Connection parameters update timeout");
+        k_thread_join(&bt_conf_thread, K_MSEC(100));
+        return err;
     }
 
+    LOG_INF("Connection parameters updated");
     return 0;
 }
 

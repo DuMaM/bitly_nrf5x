@@ -136,26 +136,24 @@ int test_init(const struct shell *shell,
               const bt_test_type_t type)
 {
     int err;
+    shell_print(shell, "\n==== Starting performance test ====");
 
     if (!getSettings())
     {
-        shell_error(shell, "Device is disconnected %s",
-                    "Connect to the peer device before running test");
+        LOG_ERR("Device is disconnected. Connect to the peer device before running test");
         return -EFAULT;
     }
 
     if (!isTestReady())
     {
-        shell_error(shell, "Device is not ready."
-                           "Please wait for the service discovery and MTU exchange end");
+        LOG_ERR("Device is not ready. Please wait for the service discovery and MTU exchange end");
         return 0;
     }
-
-    shell_print(shell, "\n==== Starting performance test ====");
 
     err = connection_configuration_set(shell, conn_param, phy, data_len);
     if (err)
     {
+        LOG_ERR("Connection settings was not set correctly");
         return err;
     }
 
@@ -163,7 +161,7 @@ int test_init(const struct shell *shell,
     err = bt_performance_test_set_type(&performance_test, type);
     if (err)
     {
-        shell_error(shell, "Reset peer metrics failed.");
+        LOG_ERR("Reset peer metrics failed.");
         return err;
     }
 
