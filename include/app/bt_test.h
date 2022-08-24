@@ -11,8 +11,8 @@ void bt_init(void);
 struct bt_conn *getSettings(void);
 volatile bool isTestReady(void);
 void restore_state();
-void scan_start(void);
-void adv_start(void);
+void scan_start(struct k_work *item);
+void adv_start(struct k_work *item);
 
 int connection_configuration_set(const struct shell *shell,
                                  const struct bt_le_conn_param *conn_param,

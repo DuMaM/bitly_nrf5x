@@ -1,20 +1,30 @@
 #include <cmd.h>
 #include <bt_test.h>
+#include <main.h>
+
 
 // add connect command
 static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv)
 {
     shell_print(shell, "\nSlave role.\n");
-    adv_start();
+
+    /* initialize work item for scanning */
+    struct k_work scan_start_work;
+    k_work_init(&scan_start_work, adv_start);
+    k_work_submit_to_queue(&main_work_q , &scan_start_work);
 
     return 0;
 }
 
 static int set_role_to_master(const struct shell *shell, size_t argc, char **argv)
 {
-    restore_state();
     shell_print(shell, "\nMaster role.\n");
-    scan_start();
+    restore_state();
+
+    /* initialize work item for scanning */
+    struct k_work scan_start_work;
+    k_work_init(&scan_start_work, scan_start);
+    k_work_submit_to_queue(&main_work_q , &scan_start_work);
 
     return 0;
 }

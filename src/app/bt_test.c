@@ -137,7 +137,7 @@ static void scan_init(void)
     LOG_INF("Scan filters are enabled");
 }
 
-void scan_start(void)
+void scan_start(struct k_work *item)
 {
     // think of bt_le_scan_start
     int err = bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
@@ -152,7 +152,7 @@ void scan_start(void)
     return;
 }
 
-void adv_start(void)
+void adv_start(struct k_work *item)
 {
     struct bt_le_adv_param *adv_param =
         BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
