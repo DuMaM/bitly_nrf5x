@@ -5,8 +5,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <performance_test.h>
 
-int test_init(const struct shell *shell,
-              const struct bt_le_conn_param *conn_param,
+int test_init(const struct bt_le_conn_param *conn_param,
               const struct bt_conn_le_phy_param *phy,
               const struct bt_conn_le_data_len_param *data_len,
               const bt_test_type_t type);

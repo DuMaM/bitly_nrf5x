@@ -129,15 +129,12 @@ const struct bt_performance_test_cb performance_test_cb = {
     .data_received = performance_test_received,
     .data_send = performance_test_send};
 
-int test_init(const struct shell *shell,
-              const struct bt_le_conn_param *conn_param,
+int test_init(const struct bt_le_conn_param *conn_param,
               const struct bt_conn_le_phy_param *phy,
               const struct bt_conn_le_data_len_param *data_len,
               const bt_test_type_t type)
 {
     int err;
-    shell_print(shell, "\n==== Starting performance test ====");
-
     if (!getSettings())
     {
         LOG_ERR("Device is disconnected. Connect to the peer device before running test");
@@ -150,7 +147,7 @@ int test_init(const struct shell *shell,
         return 0;
     }
 
-    err = connection_configuration_set(shell, conn_param, phy, data_len);
+    err = connection_configuration_set(conn_param, phy, data_len);
     if (err)
     {
         LOG_ERR("Connection settings was not set correctly");

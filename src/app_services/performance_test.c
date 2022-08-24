@@ -153,8 +153,7 @@ BT_GATT_SERVICE_DEFINE(performance_test_svc,
 
 
 // code to communicate with service to get metrics
-int bt_performance_test_init(struct bt_performance_test* performance_test,
-    const struct bt_performance_test_cb* cb)
+int bt_performance_test_init(struct bt_performance_test* performance_test, const struct bt_performance_test_cb* cb)
 {
     if (!performance_test || !cb)
     {

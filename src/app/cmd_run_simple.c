@@ -2,6 +2,8 @@
 #include <cmd.h>
 
 #include <bt_test.h>
+#include <main.h>
+
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/printk.h>
 
@@ -24,8 +26,7 @@ void print_2d_array(uint8_t *num, uint8_t size)
     }
 }
 
-int test_run(const struct shell *shell,
-             const struct bt_le_conn_param *conn_param,
+int test_run(const struct bt_le_conn_param *conn_param,
              const struct bt_conn_le_phy_param *phy,
              const struct bt_conn_le_data_len_param *data_len)
 {
@@ -35,7 +36,7 @@ int test_run(const struct shell *shell,
     uint32_t data = 0;
     int err;
 
-    err = test_init(shell, conn_param, phy, data_len, BT_TEST_TYPE_SIMPLE);
+    err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIMPLE);
     if (err)
     {
         LOG_ERR("GATT read failed (err %d)", err);
@@ -94,5 +95,7 @@ int test_run(const struct shell *shell,
 
 int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
-    return test_run(shell, test_params.conn_param, test_params.phy, test_params.data_len);
+    // return test_run(test_params.conn_param, test_params.phy, test_params.data_len);
+    shell_print(shell, "=== Start simple tests img transfer ===");
+    return test_run(test_params.conn_param, test_params.phy, test_params.data_len);
 }

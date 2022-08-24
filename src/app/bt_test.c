@@ -389,7 +389,7 @@ void connection_config_update(void *phy, void *data_len, void *conn_param)
 {
 
     int err = 0;
-    LOG_INF("PHY update pending");
+    LOG_INF("LE PHY update pending");
     err = bt_conn_le_phy_update(default_conn, phy);
     if (err)
     {
@@ -414,8 +414,7 @@ void connection_config_update(void *phy, void *data_len, void *conn_param)
     }
 }
 
-int connection_configuration_set(const struct shell *shell,
-                                 const struct bt_le_conn_param *conn_param,
+int connection_configuration_set(const struct bt_le_conn_param *conn_param,
                                  const struct bt_conn_le_phy_param *phy,
                                  const struct bt_conn_le_data_len_param *data_len)
 {
@@ -482,8 +481,7 @@ void bt_init(void)
         .le_phy_updated = le_phy_updated,
         .le_data_len_updated = le_data_length_updated};
 
-    LOG_INF("Starting Bluetooth Performance test");
-
+    LOG_INF("Bluetooth init");
     err = bt_enable(NULL);
     if (err)
     {
