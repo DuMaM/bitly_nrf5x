@@ -19,5 +19,4 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
                                  const struct bt_conn_le_data_len_param *data_len);
 
 extern struct bt_performance_test performance_test;
-extern struct k_sem performance_test_sem;
 #endif /* _BT_TEST_H_ */

@@ -3,6 +3,8 @@
 
 #include <zephyr/shell/shell.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/kernel.h>
+
 #include <performance_test.h>
 
 int test_init(const struct bt_le_conn_param *conn_param,
@@ -14,5 +16,7 @@ int test_run_ber_alternating_cmd(const struct shell *shell, size_t argc, char **
 int test_run_ber_oppsed_cmd(const struct shell *shell, size_t argc, char **argv);
 int sim_run_cmd(const struct shell *shell, size_t argc, char **argv);
 int test_run_cmd(const struct shell *shell, size_t argc, char **argv);
+
+extern struct k_sem cmd_sync_sem;
 
 #endif // _CMD_RUN_H_

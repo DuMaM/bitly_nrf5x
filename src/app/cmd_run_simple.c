@@ -21,15 +21,18 @@ void print_2d_array(uint8_t *num, uint8_t size)
     int counter = 0;
     while (counter++ < size)
     {
-        printk("%c", *num);
+        //printk("%c", *num);
         num++;
     }
 }
 
-int test_run(const struct bt_le_conn_param *conn_param,
-             const struct bt_conn_le_phy_param *phy,
-             const struct bt_conn_le_data_len_param *data_len)
+
+void test_run(struct k_work *item)
 {
+    const struct bt_le_conn_param *conn_param = test_params.conn_param;
+    const struct bt_conn_le_phy_param *phy = test_params.phy;
+    const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
+
     int64_t stamp;
     int64_t delta;
     uint32_t prog = 0;
@@ -40,10 +43,11 @@ int test_run(const struct bt_le_conn_param *conn_param,
     if (err)
     {
         LOG_ERR("GATT read failed (err %d)", err);
-        return err;
+        return;
     }
 
     /* get cycle stamp */
+    LOG_INF("Simple test started...");
     stamp = k_uptime_get_32();
     uint8_t buffer_size = test_data_buffer_size;
     uint8_t *img_prt = NULL;
@@ -83,19 +87,23 @@ int test_run(const struct bt_le_conn_param *conn_param,
     if (err)
     {
         LOG_ERR("GATT read failed (err %d)", err);
-        return err;
+        return;
     }
 
-    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
+    k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
 
     instruction_print();
 
-    return 0;
+    return;
 }
 
 int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     // return test_run(test_params.conn_param, test_params.phy, test_params.data_len);
     shell_print(shell, "=== Start simple tests img transfer ===");
-    return test_run(test_params.conn_param, test_params.phy, test_params.data_len);
+    /* initialize work item for test */
+    struct k_work test_run_simple;
+    k_work_init(&test_run_simple, test_run);
+    k_work_submit_to_queue(&main_work_q , &test_run_simple);
+    return 0;
 }

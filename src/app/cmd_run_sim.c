@@ -67,7 +67,7 @@ int sim_run(const struct shell* shell,
         return err;
     }
 
-    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
+    k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
 
     instruction_print();
 

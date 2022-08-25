@@ -16,6 +16,7 @@
 #include <bt_test.h>
 
 LOG_MODULE_DECLARE(main);
+K_SEM_DEFINE(cmd_sync_sem, 0, 1);
 
 extern struct bt_conn *default_conn;
 /* a test_data_buffer data buffer */
@@ -79,7 +80,7 @@ static void get_tx_power(struct bt_conn *conn)
 static uint8_t performance_test_read(const struct bt_performance_test_metrics *met)
 {
     LOG_INF("[peer] received %u bytes (%u KB) in %u GATT writes at %u bps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate);
-    k_sem_give(&performance_test_sem);
+    k_sem_give(&cmd_sync_sem);
 
     return BT_GATT_ITER_STOP;
 }

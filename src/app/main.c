@@ -23,11 +23,7 @@ void main(void)
     k_work_queue_init(&main_work_q);
     k_work_queue_start(&main_work_q, main_work_q_stack, K_THREAD_STACK_SIZEOF(main_work_q_stack), MAIN_QUEUE_PRIORITY, NULL);
 
-    /* init pherip */
+    /* init pheriferials */
     app_usb_init();
     bt_init();
-
-    LOG_INF("\n");
-    LOG_INF("Press button 1 on the master board.\n");
-    LOG_INF("Press button 2 on the slave board.\n");
 }
