@@ -33,6 +33,13 @@ static struct bt_uuid *uuid128 = BT_UUID_PERF_TEST;
 static struct bt_gatt_exchange_params exchange_params;
 static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, 0, 400);
 
+/**
+ * other parties can change mtu
+ * during this time we dont want to lock semaphore
+ * this var help in handling cases where data len change was from different source
+ */
+static volatile bool bt_test_req_data_len = false;
+
 struct bt_performance_test performance_test;
 extern const struct bt_performance_test_cb performance_test_cb;
 
@@ -170,7 +177,7 @@ void adv_start(struct k_work *item)
     }
     else
     {
-        LOG_ERR("Start advertiser (%d)", ad->type);
+        LOG_INF("Start advertiser (%d)", ad->type);
     }
     return;
 }
@@ -204,8 +211,6 @@ static void exchange_func(struct bt_conn *conn, uint8_t att_err,
     {
         LOG_ERR("Failed to get connection info %d", err);
         return;
-    } else {
-         = bt_nus_get_mtu(conn);
     }
 
     if (info.role == BT_CONN_ROLE_CENTRAL)
@@ -378,14 +383,18 @@ static void le_phy_updated(struct bt_conn *conn,
 static void le_data_length_updated(struct bt_conn *conn,
                                    struct bt_conn_le_data_len_info *info)
 {
-    LOG_INF("LE data len updated: TX (len: %d time: %d) RX (len: %d time: %d), done: %"PRId64,
+    LOG_INF("[%s] LE data len updated: TX (len: %d time: %d) RX (len: %d time: %d), done: %"PRId64,
+            bt_test_req_data_len ? "local" : "external",
             info->tx_max_len,
             info->tx_max_time,
             info->rx_max_len,
             info->rx_max_time,
             k_uptime_ticks());
 
-    k_sem_give(&bt_test_config_len_sem);
+    if (bt_test_req_data_len) {
+        k_sem_give(&bt_test_config_len_sem);
+        bt_test_req_data_len = false;
+    }
 }
 
 K_THREAD_STACK_DEFINE(bt_conf_thread_area, 512);
@@ -402,6 +411,7 @@ void connection_config_update(void *phy, void *data_len, void *conn_param)
     }
 
     LOG_INF("LE Data length update pending, since %"PRId64,  k_uptime_ticks());
+    bt_test_req_data_len = true;
     err = bt_conn_le_data_len_update(default_conn, data_len);
     if (err)
     {

@@ -8,10 +8,10 @@
 #include <bt_test.h>
 
 test_params_t test_params = {
-    .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY,
-                                   SUPERVISION_TIMEOUT),
+    .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT),
     .phy = BT_CONN_LE_PHY_PARAM_2M,
     .data_len = BT_LE_DATA_LEN_PARAM_MAX,
+    .max_mtu = BT_GAP_DATA_LEN_MAX,
     .enable_rssi = true,
 };
 
@@ -93,11 +93,8 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
     if ((data_len < BT_GAP_DATA_LEN_DEFAULT) ||
         (data_len > BT_GAP_DATA_LEN_MAX))
     {
-        shell_error(shell, "%s: Invalid setting: %d", argv[0],
-                    data_len);
-        shell_error(shell,
-                    "LE Data Packet Length must be between: %d and %d",
-                    BT_GAP_DATA_LEN_DEFAULT, BT_GAP_DATA_LEN_MAX);
+        shell_error(shell, "%s: Invalid setting: %d", argv[0], data_len);
+        shell_error(shell, "LE Data Packet Length must be between: %d and %d", BT_GAP_DATA_LEN_DEFAULT, BT_GAP_DATA_LEN_MAX);
         return -EINVAL;
     }
 

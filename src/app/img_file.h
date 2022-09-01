@@ -1,5 +1,7 @@
 #ifndef _IMG_FILE_H_
 
+#pragma once
+
 #define IMG_X 103
 #define IMG_Y 46
 #define IMG_SIZE (IMG_X * IMG_Y)

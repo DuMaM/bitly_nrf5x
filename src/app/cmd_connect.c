@@ -9,9 +9,9 @@ static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv
     shell_print(shell, "\nSlave role.\n");
 
     /* initialize work item for scanning */
-    struct k_work scan_start_work;
-    k_work_init(&scan_start_work, adv_start);
-    k_work_submit_to_queue(&main_work_q , &scan_start_work);
+    struct k_work adv_start_work;
+    k_work_init(&adv_start_work, adv_start);
+    k_work_submit_to_queue(&main_work_q , &adv_start_work);
 
     return 0;
 }
