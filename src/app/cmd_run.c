@@ -20,7 +20,7 @@ K_SEM_DEFINE(cmd_sync_sem, 0, 1);
 
 extern struct bt_conn *default_conn;
 /* a test_data_buffer data buffer */
-uint8_t test_data_buffer[240];
+uint8_t test_data_buffer[495];
 const uint16_t test_data_buffer_size = sizeof(test_data_buffer) / sizeof(test_data_buffer[0]);
 
 static void get_rssi_power(struct bt_conn *conn)
@@ -155,6 +155,11 @@ int test_init(const struct bt_le_conn_param *conn_param,
         return err;
     }
 
+    /* Make sure that all BLE procedures are finished. */
+    k_sleep(K_MSEC(500));
+    return 0;
+
+
     /* reset peer metrics */
     err = bt_performance_test_set_type(&performance_test, type);
     if (err)
@@ -162,10 +167,6 @@ int test_init(const struct bt_le_conn_param *conn_param,
         LOG_ERR("Reset peer metrics failed.");
         return err;
     }
-
-    /* Make sure that all BLE procedures are finished. */
-    k_sleep(K_MSEC(500));
-    return 0;
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_bt_test,
