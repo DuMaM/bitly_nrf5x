@@ -148,17 +148,12 @@ int test_init(const struct bt_le_conn_param *conn_param,
         return 0;
     }
 
-    err = connection_configuration_set(conn_param, phy, data_len);
+    err = connection_configuration_set();
     if (err)
     {
         LOG_ERR("Connection settings was not set correctly");
         return err;
     }
-
-    /* Make sure that all BLE procedures are finished. */
-    k_sleep(K_MSEC(500));
-    return 0;
-
 
     /* reset peer metrics */
     err = bt_performance_test_set_type(&performance_test, type);
@@ -167,6 +162,8 @@ int test_init(const struct bt_le_conn_param *conn_param,
         LOG_ERR("Reset peer metrics failed.");
         return err;
     }
+
+    return 0;
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_bt_test,

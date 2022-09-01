@@ -14,9 +14,10 @@ void restore_state();
 void scan_start(struct k_work *item);
 void adv_start(struct k_work *item);
 
-int connection_configuration_set(const struct bt_le_conn_param *conn_param,
-                                 const struct bt_conn_le_phy_param *phy,
-                                 const struct bt_conn_le_data_len_param *data_len);
+int connection_configuration_set();
+void config_update_param(struct k_work *item);
+void config_update_len(struct k_work *item);
+void config_update_phy(struct k_work *item);
 
 extern struct bt_performance_test performance_test;
 #endif /* _BT_TEST_H_ */

@@ -10,7 +10,6 @@
 #include <performance_test.h>
 #include "img_file.h"
 
-extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
@@ -21,7 +20,7 @@ void print_2d_array(uint8_t *num, uint8_t size)
     int counter = 0;
     while (counter++ < size)
     {
-        //printk("%c", *num);
+        printk("%c", *num);
         num++;
     }
 }
@@ -49,7 +48,7 @@ void test_run(struct k_work *item)
     /* get cycle stamp */
     LOG_INF("Simple test started...");
     stamp = k_uptime_get_32();
-    uint8_t buffer_size = test_data_buffer_size;
+    uint16_t buffer_size = test_data_buffer_size;
     uint8_t *img_prt = NULL;
     while (prog < IMG_SIZE)
     {
@@ -69,18 +68,16 @@ void test_run(struct k_work *item)
             LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
-
         print_2d_array(img_prt, buffer_size);
 
         img_prt += prog;
         prog += buffer_size;
-        data += buffer_size;
     }
 
     delta = k_uptime_delta(&stamp);
 
     LOG_INF("Done");
-    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", data, data / 1024, delta, ((uint64_t)data * 8 / delta));
+    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
 
     /* read back char from peer */
     err = bt_performance_test_read(&performance_test);
@@ -97,12 +94,12 @@ void test_run(struct k_work *item)
     return;
 }
 
+struct k_work test_run_simple;
 int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     // return test_run(test_params.conn_param, test_params.phy, test_params.data_len);
     shell_print(shell, "=== Start simple tests img transfer ===");
     /* initialize work item for test */
-    struct k_work test_run_simple;
     k_work_init(&test_run_simple, test_run);
     k_work_submit_to_queue(&main_work_q , &test_run_simple);
     return 0;

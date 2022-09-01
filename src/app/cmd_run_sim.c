@@ -6,7 +6,6 @@
 #include <performance_test.h>
 #include "sim_file.h"
 
-extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 

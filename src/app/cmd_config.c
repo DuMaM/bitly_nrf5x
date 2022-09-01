@@ -5,16 +5,20 @@
  */
 
 #include <cmd.h>
+#include <main.h>
 #include <bt_test.h>
 
+#include <zephyr/kernel.h>
+
 test_params_t test_params = {
+    // BT_LE_CONNECTOION IS A WORKAROUND ON CHECKING MULIPLE PARAM NEGOITOATION
     .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT),
     .phy = BT_CONN_LE_PHY_PARAM_2M,
     .data_len = BT_LE_DATA_LEN_PARAM_MAX,
     .enable_rssi = true,
 };
 
-
+struct k_work cmd_phy_work;
 static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
 {
     test_params.phy->options = BT_CONN_LE_PHY_OPT_NONE;
@@ -22,6 +26,9 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
     test_params.phy->pref_tx_phy = BT_GAP_LE_PHY_1M;
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
+
+    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
 
     return 0;
 }
@@ -34,6 +41,9 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
+    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
+
     return 0;
 }
 
@@ -45,6 +55,9 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
     test_params.phy->pref_tx_phy = BT_GAP_LE_PHY_CODED;
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
+
+    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
 
     return 0;
 }
@@ -63,6 +76,9 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s",
                 phy_str(test_params.phy));
 
+    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
+
     return 0;
 }
 #endif /*                                           \
@@ -71,6 +87,7 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
         */
 
 // data len
+struct k_work cmd_data_len_work;
 static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
 {
     uint16_t data_len;
@@ -102,9 +119,13 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "LE Data Packet Length set to: %d", data_len);
 
+    k_work_init(&cmd_data_len_work, config_update_len);
+    k_work_submit_to_queue(&main_work_q , &cmd_data_len_work);
+
     return 0;
 }
 
+struct k_work cmd_param_work;
 static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv)
 {
     uint16_t interval;
@@ -140,6 +161,9 @@ static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv
     test_params.conn_param->timeout = SUPERVISION_TIMEOUT;
 
     shell_print(shell, "Connection interval set to: %d", interval);
+
+    k_work_init(&cmd_data_len_work, config_update_param);
+    k_work_submit_to_queue(&main_work_q , &cmd_data_len_work);
 
     return 0;
 }

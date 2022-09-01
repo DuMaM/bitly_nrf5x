@@ -18,7 +18,6 @@
 
 #define MAX_TEST_SIZE (1800 * 1000)
 
-extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
