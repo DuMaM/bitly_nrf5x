@@ -11,7 +11,6 @@ test_params_t test_params = {
     .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT),
     .phy = BT_CONN_LE_PHY_PARAM_2M,
     .data_len = BT_LE_DATA_LEN_PARAM_MAX,
-    .max_mtu = BT_GAP_DATA_LEN_MAX,
     .enable_rssi = true,
 };
 
