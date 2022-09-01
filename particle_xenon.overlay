@@ -1,3 +1,8 @@
+&uart0 {
+    /delete-property/ rts-pin;
+    /delete-property/ cts-pin;
+};
+
 zephyr_udc0: &usbd {
     compatible = "nordic,nrf-usbd";
     status = "okay";

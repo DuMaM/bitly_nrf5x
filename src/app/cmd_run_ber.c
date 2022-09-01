@@ -1,24 +1,23 @@
 #include <zephyr/types.h>
-#include <sys/printk.h>
+#include <zephyr/sys/printk.h>
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/crypto.h>
-#include <bluetooth/conn.h>
-#include <bluetooth/gatt.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/uuid.h>
-#include <performance_test.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/crypto.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/uuid.h>
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
 
 #include <cmd_run.h>
 #include <cmd.h>
+#include <performance_test.h>
 
 #include <bt_test.h>
 
 #define MAX_TEST_SIZE (1800 * 1000)
 
-extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
@@ -49,7 +48,7 @@ int test_run_ber(const struct shell *shell,
     char pattern_string[7];
     int err;
 
-    err = test_init(shell, conn_param, phy, data_len, BT_TEST_TYPE_BER);
+    err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_BER);
     if (err)
     {
         shell_error(shell, "Init test failed (err %d)", err);
@@ -85,7 +84,7 @@ int test_run_ber(const struct shell *shell,
     shell_print(shell, "Done");
     shell_print(shell, "[local] sent %"PRIi64" bytes (%"PRIi64" KB) in %"PRIi64" ms at %"PRIu64" kbps", data, data / 1024, delta, ((data * 8) / delta));
 
-    /* read back char from peer */
+    /* read back char from peer and wait to finish it */
     err = bt_performance_test_read(&performance_test);
     if (err)
     {
@@ -93,7 +92,7 @@ int test_run_ber(const struct shell *shell,
         return err;
     }
 
-    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
+    k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
     shell_print(shell, "Command finished");
 
     return 0;

@@ -147,7 +147,7 @@ The result should look similar to the following output.
 For the tester::
 
    *** Booting Zephyr OS build v2.4.0-ncs1-1715-g3366927a5498  ***
-   Starting Bluetooth Performance test example
+   Starting Bluetooth Performance test
    I: SoftDevice Controller build revision:
    I: 7a 01 b4 17 68 14 99 b6 |z...h...
    I: 6a d1 f2 fd fe 59 63 e3 |j....Yc.
@@ -195,7 +195,7 @@ For the tester::
 For the peer::
 
    *** Booting Zephyr OS build v2.4.0-ncs1-1715-g3366927a5498  ***
-   Starting Bluetooth Performance test example
+   Starting Bluetooth Performance test
    I: SoftDevice Controller build revision:
    I: 7a 01 b4 17 68 14 99 b6 |z...h...
    I: 6a d1 f2 fd fe 59 63 e3 |j....Yc.

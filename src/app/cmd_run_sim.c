@@ -6,7 +6,6 @@
 #include <performance_test.h>
 #include "sim_file.h"
 
-extern test_params_t test_params;
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
@@ -21,7 +20,7 @@ int sim_run(const struct shell* shell,
     uint32_t data = 0;
     int err;
 
-    err = test_init(shell, conn_param, phy, data_len, BT_TEST_TYPE_SIM);
+    err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIM);
     if (err)
     {
         shell_error(shell, "GATT read failed (err %d)", err);
@@ -67,7 +66,7 @@ int sim_run(const struct shell* shell,
         return err;
     }
 
-    k_sem_take(&performance_test_sem, PERF_TEST_CONFIG_TIMEOUT);
+    k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
 
     instruction_print();
 

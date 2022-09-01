@@ -225,6 +225,8 @@ void ads129x_standby(void);
 void ads129x_start(void);
 void ads129x_stop(void);
 void ads129x_reset(void);
+void ads129x_rdatac(void);
+void ads129x_sdatac(void);
 
 void ads129x_read_data(void);
 void ads129x_write_data(void);
@@ -239,5 +241,6 @@ void ads129x_write_data_single(void);
 
 int ads129x_get_device_id(uint8_t* dev_id);
 void ads129x_setup();
+void ads129x_print(bool _print);
 
 #endif

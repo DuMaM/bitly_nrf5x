@@ -6,6 +6,9 @@
 
 #include <cmd.h>
 #include <bt_test.h>
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_DECLARE(main);
 
 int default_cmd(const struct shell *shell, size_t argc, char **argv)
 {
@@ -17,13 +20,13 @@ int default_cmd(const struct shell *shell, size_t argc, char **argv)
 
     if (argc > 2)
     {
-        shell_error(shell, "%s: bad parameters count.", argv[0]);
+        LOG_ERR("%s: bad parameters count.", argv[0]);
         return -EINVAL;
     }
 
     if (argc == 2)
     {
-        shell_error(shell, "Uknown argument: %s", argv[1]);
+        LOG_ERR("Uknown argument: %s", argv[1]);
         return -EINVAL;
     }
 
@@ -82,8 +85,8 @@ int8_t atob(const char *buffer)
 
 void instruction_print(void)
 {
-    printk("\n");
-    printk("Type 'config' to change the configuration parameters.\n");
-    printk("You can use the Tab key to autocomplete your input.\n");
-    printk("Type 'run' when you are ready to run the test.\n");
+    LOG_INF("");
+    LOG_INF("Type 'config' to change the configuration parameters.");
+    LOG_INF("You can use the Tab key to autocomplete your input.");
+    LOG_INF("Type 'run' when you are ready to run the test.");
 }
