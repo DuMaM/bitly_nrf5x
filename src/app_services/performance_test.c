@@ -22,18 +22,17 @@ LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 
 static struct bt_performance_test_metrics met;
 static bt_test_type_t test_type;
-static const struct bt_performance_test_cb* callbacks;
+static const struct bt_performance_test_cb *callbacks;
 
 static uint32_t clock_cycles;
 static uint32_t kb;
 
 /* callback function fot get data received into get buffer from slave */
-static uint8_t read_fn(struct bt_conn* conn, uint8_t err,
-    struct bt_gatt_read_params* params, const void* data,
-    uint16_t len)
+static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
+                       struct bt_gatt_read_params *params, const void *data,
+                       uint16_t len)
 {
     struct bt_performance_test_metrics metrics;
-
     memset(&metrics, 0, sizeof(struct bt_performance_test_metrics));
 
     if (data)
@@ -51,17 +50,17 @@ static uint8_t read_fn(struct bt_conn* conn, uint8_t err,
 }
 
 /* every call to this function it will update communication metrics */
-static ssize_t write_callback(struct bt_conn* conn,
-    const struct bt_gatt_attr* attr,
-    const void* buf,
-    uint16_t len,
-    uint16_t offset,
-    uint8_t flags)
+static ssize_t write_callback(struct bt_conn *conn,
+                              const struct bt_gatt_attr *attr,
+                              const void *buf,
+                              uint16_t len,
+                              uint16_t offset,
+                              uint8_t flags)
 {
 
     uint64_t delta;
 
-    struct bt_performance_test_metrics* met_data = attr->user_data;
+    struct bt_performance_test_metrics *met_data = attr->user_data;
 
     delta = k_cycle_get_32() - clock_cycles;
     delta = k_cyc_to_ns_floor64(delta);
@@ -69,7 +68,6 @@ static ssize_t write_callback(struct bt_conn* conn,
     met_data->write_count++;
     met_data->write_len += len;
     met_data->write_rate = ((uint64_t)met_data->write_len << 3) * 1000000000 / delta;
-
 
     LOG_DBG("Received data.");
 
@@ -82,11 +80,11 @@ static ssize_t write_callback(struct bt_conn* conn,
 }
 
 // sends back metrics data to master
-static ssize_t read_callback(struct bt_conn* conn,
-    const struct bt_gatt_attr* attr, void* buf,
-    uint16_t len, uint16_t offset)
+static ssize_t read_callback(struct bt_conn *conn,
+                             const struct bt_gatt_attr *attr, void *buf,
+                             uint16_t len, uint16_t offset)
 {
-    const struct bt_performance_test_metrics* metrics = attr->user_data;
+    const struct bt_performance_test_metrics *metrics = attr->user_data;
 
     len = MIN(sizeof(struct bt_performance_test_metrics), len);
 
@@ -101,39 +99,38 @@ static ssize_t read_callback(struct bt_conn* conn,
 }
 
 // saves data which was send from master to slave
-static ssize_t descriptor_write_callback(struct bt_conn* conn,
-    const struct bt_gatt_attr* attr,
-    const void* buf,
-    uint16_t len,
-    uint16_t offset,
-    uint8_t flags)
+static ssize_t descriptor_write_callback(struct bt_conn *conn,
+                                         const struct bt_gatt_attr *attr,
+                                         const void *buf,
+                                         uint16_t len,
+                                         uint16_t offset,
+                                         uint8_t flags)
 {
-    bt_test_type_t test_type = BT_TEST_TYPE_UNKNOWN;
-
-    if (len != sizeof(bt_test_type_t)) {
+    bt_test_type_t *test_type = attr->user_data;
+    if (len != sizeof(bt_test_type_t))
+    {
         return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
     }
-    memcpy(&test_type, buf, sizeof(bt_test_type_t));
+    memcpy(test_type, buf, sizeof(bt_test_type_t));
 
-    switch (test_type)
+
+    /* reset metrics */
+    kb = 0;
+    clock_cycles = k_cycle_get_32();
+    met.write_count = 0;
+    met.write_len = 0;
+    met.write_rate = 0;
+    met.error_count = -1;
+
+    switch (*test_type)
     {
     default:
-    case BT_TEST_TYPE_UNKNOWN: {
-        struct bt_performance_test_metrics* met_data = attr->user_data;
-
-        /* reset metrics */
-        kb = 0;
-        clock_cycles = k_cycle_get_32();
-        met_data->write_count = 0;
-        met_data->write_len = 0;
-        met_data->write_rate = 0;
-        met_data->error_count = -1;
-        break;
-    }
+    case BT_TEST_TYPE_UNKNOWN:
     case BT_TEST_TYPE_SIMPLE:
     case BT_TEST_TYPE_ANALOG:
     case BT_TEST_TYPE_BER:
-    case BT_TEST_TYPE_SIM: {
+    case BT_TEST_TYPE_SIM:
+    {
         break;
     }
     }
@@ -141,19 +138,17 @@ static ssize_t descriptor_write_callback(struct bt_conn* conn,
     return BT_GATT_ITER_STOP;
 }
 
-
 BT_GATT_SERVICE_DEFINE(performance_test_svc,
-    BT_GATT_PRIMARY_SERVICE(BT_UUID_PERF_TEST),
-    BT_GATT_CHARACTERISTIC(BT_UUID_PERF_TEST_CHAR,
-        BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
-        BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
-        read_callback, write_callback, &met),
+                       BT_GATT_PRIMARY_SERVICE(BT_UUID_PERF_TEST),
+                       BT_GATT_CHARACTERISTIC(BT_UUID_PERF_TEST_CHAR,
+                                              BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+                                              BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
+                                              read_callback, write_callback, &met),
 
-    BT_GATT_DESCRIPTOR(BT_UUID_PERF_TEST_DES, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, descriptor_write_callback, &test_type), );
-
+                       BT_GATT_DESCRIPTOR(BT_UUID_PERF_TEST_DES, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, descriptor_write_callback, &test_type), );
 
 // code to communicate with service to get metrics
-int bt_performance_test_init(struct bt_performance_test* performance_test, const struct bt_performance_test_cb* cb)
+int bt_performance_test_init(struct bt_performance_test *performance_test, const struct bt_performance_test_cb *cb)
 {
     if (!performance_test || !cb)
     {
@@ -165,16 +160,16 @@ int bt_performance_test_init(struct bt_performance_test* performance_test, const
     return 0;
 }
 
-int bt_performance_test_handles_assign(struct bt_gatt_dm* dm,
-    struct bt_performance_test* performance_test)
+int bt_performance_test_handles_assign(struct bt_gatt_dm *dm,
+                                       struct bt_performance_test *performance_test)
 {
-    const struct bt_gatt_dm_attr* gatt_service_attr =
+    const struct bt_gatt_dm_attr *gatt_service_attr =
         bt_gatt_dm_service_get(dm);
-    const struct bt_gatt_service_val* gatt_service =
+    const struct bt_gatt_service_val *gatt_service =
         bt_gatt_dm_attr_service_val(gatt_service_attr);
-    const struct bt_gatt_dm_attr* gatt_chrc;
-    const struct bt_gatt_dm_attr* gatt_desc;
-    const struct bt_gatt_dm_attr* gatt_desc_type;
+    const struct bt_gatt_dm_attr *gatt_chrc;
+    const struct bt_gatt_dm_attr *gatt_desc;
+    const struct bt_gatt_dm_attr *gatt_desc_type;
 
     if (bt_uuid_cmp(gatt_service->uuid, BT_UUID_PERF_TEST))
     {
@@ -214,7 +209,7 @@ int bt_performance_test_handles_assign(struct bt_gatt_dm* dm,
 }
 
 // slave -> master
-int bt_performance_test_read(struct bt_performance_test* performance_test)
+int bt_performance_test_read(struct bt_performance_test *performance_test)
 {
     int err;
 
@@ -233,20 +228,20 @@ int bt_performance_test_read(struct bt_performance_test* performance_test)
 }
 
 // master -> slave
-int bt_performance_test_write(struct bt_performance_test* performance_test,
-    const uint8_t* data, uint16_t len)
+int bt_performance_test_write(struct bt_performance_test *performance_test,
+                              const uint8_t *data, uint16_t len)
 {
     return bt_gatt_write_without_response(performance_test->conn,
-        performance_test->char_handle,
-        data, len, false);
+                                          performance_test->char_handle,
+                                          data, len, false);
 }
 
 // master -> slave
-int bt_performance_test_set_type(struct bt_performance_test* performance_test,
-    bt_test_type_t type)
+int bt_performance_test_set_type(struct bt_performance_test *performance_test,
+                                 bt_test_type_t type)
 {
     const uint8_t test_type = type;
     return bt_gatt_write_without_response(performance_test->conn,
-        performance_test->dsc_handle,
-        &test_type, 1, false);
+                                          performance_test->dsc_handle,
+                                          &test_type, 1, false);
 }
