@@ -7,9 +7,11 @@
 #include <zephyr.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/sys/printk.h>
 #include <zephyr/sys/__assert.h>
+#include <zephyr/logging/log.h>
 #include <string.h>
+
+LOG_MODULE_DECLARE(main);
 
 /* size of stack area used by each thread */
 #define STACKSIZE 256
@@ -66,13 +68,13 @@ void blink(const struct led *led, uint32_t sleep_ms)
     int ret;
 
     if (!device_is_ready(spec->port)) {
-        printk("Error: %s device is not ready\n", spec->port->name);
+        LOG_ERR("Error: %s device is not ready\n", spec->port->name);
         return;
     }
 
     ret = gpio_pin_configure_dt(spec, GPIO_OUTPUT);
     if (ret != 0) {
-        printk("Error %d: failed to configure pin %d (LED '%s')\n", ret, spec->pin, led->gpio_pin_name);
+        LOG_ERR("Error %d: failed to configure pin %d (LED '%s')", ret, spec->pin, led->gpio_pin_name);
         return;
     }
 

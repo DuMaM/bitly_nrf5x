@@ -5,7 +5,6 @@
 #include <main.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/printk.h>
 
 #include <performance_test.h>
 #include "img_file.h"
@@ -56,7 +55,6 @@ static void test_run(struct k_work *item)
             LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
-        print_2d_array(img_prt, buffer_size);
         prog += buffer_size;
     }
 

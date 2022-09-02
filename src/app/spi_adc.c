@@ -485,7 +485,7 @@ void ads129x_setup(void)
 
     uint8_t dev_id = 0;
     ads129x_get_device_id(&dev_id);
-    printk("Device ID: %d\n", dev_id);
+    LOG_INF("Device ID: %d\n", dev_id);
 
     // setup channels
     ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);

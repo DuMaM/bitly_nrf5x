@@ -1,5 +1,4 @@
 #include <zephyr/types.h>
-#include <zephyr/sys/printk.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/crypto.h>
