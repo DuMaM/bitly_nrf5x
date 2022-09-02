@@ -15,18 +15,7 @@ extern uint16_t test_data_buffer_size;
 
 LOG_MODULE_DECLARE(main);
 
-void print_2d_array(uint8_t *num, uint8_t size)
-{
-    int counter = 0;
-    while (counter++ < size)
-    {
-        printk("%c", *num);
-        num++;
-    }
-}
-
-
-void test_run(struct k_work *item)
+static void test_run(struct k_work *item)
 {
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     const struct bt_conn_le_phy_param *phy = test_params.phy;
@@ -68,8 +57,6 @@ void test_run(struct k_work *item)
             break;
         }
         print_2d_array(img_prt, buffer_size);
-
-        img_prt += prog;
         prog += buffer_size;
     }
 
