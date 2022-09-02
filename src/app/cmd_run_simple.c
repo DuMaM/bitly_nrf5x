@@ -35,7 +35,6 @@ void test_run(struct k_work *item)
     int64_t stamp;
     int64_t delta;
     uint32_t prog = 0;
-    uint32_t data = 0;
     int err;
 
     err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIMPLE);
