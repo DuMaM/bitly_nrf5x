@@ -120,7 +120,7 @@ static void performance_test_received(const struct bt_performance_test_metrics *
 
 static void performance_test_send(const struct bt_performance_test_metrics *met)
 {
-    LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u bps",met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
+    LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u bps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
 }
 
 const struct bt_performance_test_cb performance_test_cb = {

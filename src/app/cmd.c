@@ -65,7 +65,6 @@ const char *phy_str(const struct bt_conn_le_phy_param *phy)
     }
 }
 
-
 // void print_2d_array(uint8_t *num, uint16_t size)
 // {
 //     int counter = 0;

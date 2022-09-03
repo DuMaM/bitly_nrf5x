@@ -49,7 +49,6 @@ static int ecg_data_dump(const struct shell *shell, size_t argc, char **argv)
     return 0;
 }
 
-
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_role,
                                SHELL_CMD(enable, NULL, "Enables continuos data transfer", ecg_data_enable),
                                SHELL_CMD(disable, NULL, "Disables continuos data transfer", ecg_data_disable),

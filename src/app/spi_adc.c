@@ -462,7 +462,6 @@ void ads129x_init(void)
 #endif
 }
 
-
 void ads129x_setup(void)
 {
     // Wait for 18 tCLKs AKA 30*18 microseconds
@@ -519,7 +518,8 @@ void ads129x_main_thread(void)
 
             /* do processing */
             int ret = spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
-            if (!ret) {
+            if (!ret)
+            {
                 ads129x_dump_data();
             }
         }
@@ -527,7 +527,7 @@ void ads129x_main_thread(void)
         {
             /* put CPU to sleep to save power */
             k_cpu_atomic_idle(key);
-            //k_usleep(100);
+            // k_usleep(100);
         }
     }
 }

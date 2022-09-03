@@ -28,7 +28,7 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
     k_work_init(&cmd_phy_work, config_update_param);
-    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
+    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
 }
@@ -42,7 +42,7 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
     k_work_init(&cmd_phy_work, config_update_param);
-    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
+    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
 }
@@ -57,7 +57,7 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
     k_work_init(&cmd_phy_work, config_update_param);
-    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
+    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
 }
@@ -77,7 +77,7 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
                 phy_str(test_params.phy));
 
     k_work_init(&cmd_phy_work, config_update_param);
-    k_work_submit_to_queue(&main_work_q , &cmd_phy_work);
+    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
 }
@@ -120,7 +120,7 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "LE Data Packet Length set to: %d", data_len);
 
     k_work_init(&cmd_data_len_work, config_update_len);
-    k_work_submit_to_queue(&main_work_q , &cmd_data_len_work);
+    k_work_submit_to_queue(&main_work_q, &cmd_data_len_work);
 
     return 0;
 }
@@ -163,7 +163,7 @@ static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv
     shell_print(shell, "Connection interval set to: %d", interval);
 
     k_work_init(&cmd_data_len_work, config_update_param);
-    k_work_submit_to_queue(&main_work_q , &cmd_data_len_work);
+    k_work_submit_to_queue(&main_work_q, &cmd_data_len_work);
 
     return 0;
 }
@@ -208,7 +208,6 @@ static int print_cmd(const struct shell *shell, size_t argc,
     return 0;
 }
 
-
 SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
                                SHELL_CMD(1M, NULL, "Set preferred PHY to 1Mbps", cmd_phy_1m),
                                SHELL_CMD(2M, NULL, "Set preferred PHY to 2Mbps", cmd_phy_2m),
@@ -229,4 +228,3 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
                                SHELL_SUBCMD_SET_END);
 
 SHELL_CMD_REGISTER(config, &sub_config, "Configure testing parameters", default_cmd);
-

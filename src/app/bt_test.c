@@ -382,7 +382,7 @@ static void le_phy_updated(struct bt_conn *conn,
 static void le_data_length_updated(struct bt_conn *conn,
                                    struct bt_conn_le_data_len_info *info)
 {
-    LOG_INF("[%s] LE data len updated: TX (len: %d time: %d) RX (len: %d time: %d), done: %"PRId64,
+    LOG_INF("[%s] LE data len updated: TX (len: %d time: %d) RX (len: %d time: %d), done: %" PRId64,
             bt_test_req_data_len ? "local" : "external",
             info->tx_max_len,
             info->tx_max_time,
@@ -390,7 +390,8 @@ static void le_data_length_updated(struct bt_conn *conn,
             info->rx_max_time,
             k_uptime_ticks());
 
-    if (bt_test_req_data_len) {
+    if (bt_test_req_data_len)
+    {
         k_sem_give(&bt_test_config_len_sem);
         bt_test_req_data_len = false;
     }
@@ -400,7 +401,8 @@ void config_update_phy(struct k_work *item)
 {
     const struct bt_conn_le_phy_param *phy = test_params.phy;
     int err = 0;
-    if (!default_conn) {
+    if (!default_conn)
+    {
         LOG_DBG("Disconnected - no need to update PHY");
         return;
     }
@@ -418,7 +420,9 @@ void config_update_phy(struct k_work *item)
     {
         LOG_ERR("LE PHY update timeout");
         return;
-    } else {
+    }
+    else
+    {
         LOG_INF("LE PHY was updated");
     }
 }
@@ -428,12 +432,13 @@ void config_update_len(struct k_work *item)
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
     int err = 0;
 
-    if (!default_conn) {
+    if (!default_conn)
+    {
         LOG_DBG("Disconnected - no need to update Data Len");
         return;
     }
 
-    LOG_INF("LE Data length update pending, since %"PRId64,  k_uptime_ticks());
+    LOG_INF("LE Data length update pending, since %" PRId64, k_uptime_ticks());
     bt_test_req_data_len = true;
     err = bt_conn_le_data_len_update(default_conn, data_len);
     if (err)
@@ -447,7 +452,9 @@ void config_update_len(struct k_work *item)
     {
         LOG_ERR("LE Data Length update timeout");
         return;
-    } else {
+    }
+    else
+    {
         LOG_INF("LE Data Length updated");
     }
 }
@@ -457,7 +464,8 @@ void config_update_param(struct k_work *item)
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     int err = 0;
 
-    if (!default_conn) {
+    if (!default_conn)
+    {
         LOG_DBG("Disconnected - no need to update connection parameters");
         return;
     }
@@ -475,11 +483,13 @@ void config_update_param(struct k_work *item)
     {
         LOG_ERR("LE Connection parameters update timeout");
         return;
-    } else {
+    }
+    else
+    {
         LOG_INF("LE Connection parameters updated");
     }
 
-    LOG_INF("Connection parameters updated, till %"PRId64,  k_uptime_ticks());
+    LOG_INF("Connection parameters updated, till %" PRId64, k_uptime_ticks());
 }
 
 int connection_configuration_set()

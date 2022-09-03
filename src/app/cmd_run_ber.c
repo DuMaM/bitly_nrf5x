@@ -20,8 +20,7 @@
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 
-
-char *bitString(uint8_t n, char* out_bin_string)
+char *bitString(uint8_t n, char *out_bin_string)
 {
     int i;
     for (i = 7; i >= 0; i--)
@@ -34,11 +33,11 @@ char *bitString(uint8_t n, char* out_bin_string)
 }
 
 int test_run_ber(const struct shell *shell,
-                             const uint16_t period_sec,
-                             const struct bt_le_conn_param *conn_param,
-                             const struct bt_conn_le_phy_param *phy,
-                             const struct bt_conn_le_data_len_param *data_len,
-                             const uint8_t pattern)
+                 const uint16_t period_sec,
+                 const struct bt_le_conn_param *conn_param,
+                 const struct bt_conn_le_phy_param *phy,
+                 const struct bt_conn_le_data_len_param *data_len,
+                 const uint8_t pattern)
 {
     int64_t stamp = 0;
     int64_t delta = 0;
@@ -64,7 +63,7 @@ int test_run_ber(const struct shell *shell,
     /* get cycle stamp */
     stamp = k_uptime_get_32();
 
-    while (delta/1000 < period_sec)
+    while (delta / 1000 < period_sec)
     {
         err = bt_performance_test_write(&performance_test, test_data_buffer, test_data_buffer_size);
         if (err)
@@ -75,13 +74,13 @@ int test_run_ber(const struct shell *shell,
 
         /* print data */
         prog++;
-        shell_print(shell, "(%"PRIu64")Sending %"PRIu64": %s ...", prog, delta, pattern_string);
+        shell_print(shell, "(%" PRIu64 ")Sending %" PRIu64 ": %s ...", prog, delta, pattern_string);
         data += test_data_buffer_size;
         delta += k_uptime_delta(&stamp);
     }
 
     shell_print(shell, "Done");
-    shell_print(shell, "[local] sent %"PRIi64" bytes (%"PRIi64" KB) in %"PRIi64" ms at %"PRIu64" kbps", data, data / 1024, delta, ((data * 8) / delta));
+    shell_print(shell, "[local] sent %" PRIi64 " bytes (%" PRIi64 " KB) in %" PRIi64 " ms at %" PRIu64 " kbps", data, data / 1024, delta, ((data * 8) / delta));
 
     /* read back char from peer and wait to finish it */
     err = bt_performance_test_read(&performance_test);
@@ -131,7 +130,6 @@ int test_run_ber_alternating_cmd(const struct shell *shell, size_t argc, char **
                         test_params.data_len,
                         0x33);
 }
-
 
 int test_run_ber_oppsed_cmd(const struct shell *shell, size_t argc, char **argv)
 {

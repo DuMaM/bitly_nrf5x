@@ -42,7 +42,6 @@ LOG_MODULE_DECLARE(main);
 
 #ifdef CONFIG_BOARD_PARTICLE_XENON
 
-
 void app_usb_init(void)
 {
     int ret = 0;
@@ -67,8 +66,9 @@ void app_usb_init(void)
     }
 
     LOG_INF("Usb CDC ACM successfully enabled");
-
 }
 #else
-void app_usb_init(void) {}
+void app_usb_init(void)
+{
+}
 #endif

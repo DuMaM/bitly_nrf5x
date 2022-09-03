@@ -16,7 +16,8 @@ static uint8_t test_runs = 1;
 LOG_MODULE_DECLARE(main);
 
 #define SIM_VALUE_BYTE_SIZE 3
-static uint32_t send_test_sim_data() {
+static uint32_t send_test_sim_data()
+{
     uint32_t prog = 0;
     uint16_t buffer_size = 0;
     uint32_t *sim_ptr = NULL;
@@ -39,18 +40,18 @@ static uint32_t send_test_sim_data() {
 
         for (int i = 0, j = 0; i < buffer_size; i = i + SIM_VALUE_BYTE_SIZE, j++)
         {
-            #if SIM_VALUE_BYTE_SIZE >= 1
+#if SIM_VALUE_BYTE_SIZE >= 1
             test_data_buffer[i] = sim_ptr[j];
-            #endif
-            #if SIM_VALUE_BYTE_SIZE >= 2
+#endif
+#if SIM_VALUE_BYTE_SIZE >= 2
             test_data_buffer[i + 1] = sim_ptr[j] >> 8;
-            #endif
-            #if SIM_VALUE_BYTE_SIZE >= 3
+#endif
+#if SIM_VALUE_BYTE_SIZE >= 3
             test_data_buffer[i + 2] = sim_ptr[j] >> 16;
-            #endif
-            #if SIM_VALUE_BYTE_SIZE >= 4
+#endif
+#if SIM_VALUE_BYTE_SIZE >= 4
             test_data_buffer[i + 3] = sim_ptr[j] >> 24;
-            #endif
+#endif
         }
 
         err = bt_performance_test_write(&performance_test, test_data_buffer, buffer_size);
@@ -84,7 +85,8 @@ static void test_run(struct k_work *item)
     /* get cycle stamp */
     LOG_INF("Sim test started...");
     stamp = k_uptime_get_32();
-    for (int i=0; i < test_runs; i++) {
+    for (int i = 0; i < test_runs; i++)
+    {
         prog += send_test_sim_data();
     }
 
@@ -125,7 +127,7 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
     test_runs = strtol(argv[1], NULL, 10);
     if (test_runs < 1)
     {
-        shell_error(shell, "Invalid parameter %"PRIu8, test_runs);
+        shell_error(shell, "Invalid parameter %" PRIu8, test_runs);
         return -EINVAL;
     }
 

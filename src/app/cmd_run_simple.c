@@ -85,6 +85,6 @@ int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "=== Start simple tests img transfer ===");
     /* initialize work item for test */
     k_work_init(&test_run_simple, test_run);
-    k_work_submit_to_queue(&main_work_q , &test_run_simple);
+    k_work_submit_to_queue(&main_work_q, &test_run_simple);
     return 0;
 }
