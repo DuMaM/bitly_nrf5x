@@ -244,7 +244,6 @@ In addition, it uses the following Zephyr libraries:
 
   * ``include/kernel.h``
 
-* ``include/sys/printk.h``
 * ``include/zephyr/types.h``
 * :ref:`zephyr:bluetooth_api`:
 

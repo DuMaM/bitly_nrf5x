@@ -5,7 +5,6 @@
 #include <main.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/printk.h>
 
 #include <performance_test.h>
 #include "img_file.h"
@@ -15,18 +14,7 @@ extern uint16_t test_data_buffer_size;
 
 LOG_MODULE_DECLARE(main);
 
-void print_2d_array(uint8_t *num, uint8_t size)
-{
-    int counter = 0;
-    while (counter++ < size)
-    {
-        printk("%c", *num);
-        num++;
-    }
-}
-
-
-void test_run(struct k_work *item)
+static void test_run(struct k_work *item)
 {
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     const struct bt_conn_le_phy_param *phy = test_params.phy;
@@ -67,9 +55,6 @@ void test_run(struct k_work *item)
             LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
-        print_2d_array(img_prt, buffer_size);
-
-        img_prt += prog;
         prog += buffer_size;
     }
 
@@ -100,6 +85,6 @@ int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "=== Start simple tests img transfer ===");
     /* initialize work item for test */
     k_work_init(&test_run_simple, test_run);
-    k_work_submit_to_queue(&main_work_q , &test_run_simple);
+    k_work_submit_to_queue(&main_work_q, &test_run_simple);
     return 0;
 }

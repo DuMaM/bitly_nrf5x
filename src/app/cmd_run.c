@@ -58,7 +58,7 @@ static void get_rssi_power(struct bt_conn *conn)
     else
     {
         rp = (struct bt_hci_rp_read_rssi *)(rsp->data);
-        LOG_INF("RSSI power returned by command: %" PRId8, rp->rssi);
+        LOG_DBG("RSSI power returned by command: %" PRId8, rp->rssi);
     }
 
     if (rsp)
@@ -79,7 +79,7 @@ static void get_tx_power(struct bt_conn *conn)
 
 static uint8_t performance_test_read(const struct bt_performance_test_metrics *met)
 {
-    LOG_INF("[peer] received %u bytes (%u KB) in %u GATT writes at %u bps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate);
+    LOG_INF("[peer] received %u bytes (%u KB) in %u GATT writes at %u kbps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
     k_sem_give(&cmd_sync_sem);
 
     return BT_GATT_ITER_STOP;
@@ -95,34 +95,32 @@ static void performance_test_received(const struct bt_performance_test_metrics *
     {
         kb = 0;
         kb_line = 0;
-        printk("\n");
+        LOG_INF("Test started");
         return;
     }
 
     /* show progress of data transfer */
-    uint32_t kb_tmp = met->write_len / 1024;
+    uint32_t kb_tmp = met->write_len / 10240;
     if (kb_tmp != kb)
     {
         kb = kb_tmp;
-        printk("=");
+        LOG_INF("Received 10kb...");
     }
 
-    /*
-     * classic terminal have line width 80 characters long
-     * so we want to add formatting so it will be easier to read
-     */
-    uint16_t kb_line_tmp = kb / 64;
-    if (kb_line != kb_line_tmp)
-    {
-        get_rssi_power(default_conn);
-        get_tx_power(default_conn);
-        printk("\n");
-    }
+    // /*
+    //  * classic terminal have line width 80 characters long
+    //  * so we want to add formatting so it will be easier to read
+    //  */
+    // uint16_t kb_line_tmp = kb / 64;
+    // if (kb_line != kb_line_tmp)
+    // {
+    //     get_rssi_power(default_conn);
+    // }
 }
 
 static void performance_test_send(const struct bt_performance_test_metrics *met)
 {
-    LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u bps",met->write_len, met->write_len / 1024, met->write_count, met->write_rate);
+    LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u bps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
 }
 
 const struct bt_performance_test_cb performance_test_cb = {

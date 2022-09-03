@@ -4,7 +4,6 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/types.h>
-#include <zephyr/sys/printk.h>
 
 #include <errno.h>
 #include <stdlib.h>
