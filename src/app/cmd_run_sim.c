@@ -83,7 +83,7 @@ static void test_run(struct k_work *item)
     }
 
     /* get cycle stamp */
-    LOG_INF("Sim test started...");
+    LOG_INF("=== Start sim data transfer ===");
     stamp = k_uptime_get_32();
     for (int i = 0; i < test_runs; i++)
     {
@@ -130,8 +130,6 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
         shell_error(shell, "Invalid parameter %" PRIu8, test_runs);
         return -EINVAL;
     }
-
-    shell_print(shell, "=== Start sim data transfer ===");
 
     /* initialize work item for test */
     k_work_init(&test_run_sim, test_run);

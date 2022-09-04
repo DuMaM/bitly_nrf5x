@@ -58,7 +58,7 @@ static void test_run(struct k_work *item)
     uint32_t prog = 0;
 
     int err;
-    err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIM);
+    err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_ANALOG);
     if (err)
     {
         LOG_ERR("GATT read failed (err %d)", err);
@@ -66,7 +66,7 @@ static void test_run(struct k_work *item)
     }
 
     /* get cycle stamp */
-    LOG_INF("Sim test started...");
+    LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
     send_test_sim_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
@@ -94,6 +94,7 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     if (argc == 1)
     {
         shell_help(shell);
+        LOG_ERR("%s: This command require value in bytes, which tells how many bytes need to be send", argv[0]);
         return SHELL_CMD_HELP_PRINTED;
     }
 
@@ -109,8 +110,6 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
         LOG_ERR("Invalid parameter %" PRIu8 ", it should be bigger then max data send from spi device", bytes_to_send);
         return -EINVAL;
     }
-
-    LOG_INF("=== Start sim data transfer ===");
 
     /* initialize work item for test */
     k_work_init(&test_run_adc, test_run);
