@@ -226,25 +226,28 @@
 #define ADS129_SPI_DATA_NUM (ADS129_SPI_DATA_PACKAGES_NUM + ADS129_SPI_STATUS_WORD_NUM)
 #define ADS129x_DATA_BUFFER_SIZE (ADS129_SPI_DATA_NUM * 3)
 
+typedef struct _packet_12lead
+{
+    uint32_t status : 24;
+    uint32_t v1_c1 : 24;
+    uint32_t v2_c2 : 24;
+    uint32_t v3_c3 : 24;
+    uint32_t v4_c4 : 24;
+    uint32_t v5_c5 : 24;
+    uint32_t v6_c6 : 24;
+
+    uint32_t ra_r : 24;
+    uint32_t la_l : 24;
+    uint32_t rl_n : 24;
+    uint32_t ll_f : 24;
+} packet_12lead_t;
+
 typedef union _ads129x_data_packet_t
 {
-    uint8_t packet[ADS129x_DATA_BUFFER_SIZE];
-    struct _pack_struct
-    {
-        uint32_t status : 24;
-        uint32_t v1_c1 : 24;
-        uint32_t v2_c2 : 24;
-        uint32_t v3_c3 : 24;
-        uint32_t v4_c4 : 24;
-        uint32_t v5_c5 : 24;
-        uint32_t v6_c6 : 24;
-
-        uint32_t ra_r : 24;
-        uint32_t la_l : 24;
-        uint32_t rl_n : 24;
-        uint32_t ll_f : 24;
-    };
+    uint8_t packet_raw[ADS129x_DATA_BUFFER_SIZE];
+    packet_12lead_t packet_12lead;
 } ads129x_data_packet_t;
+
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size);
 uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size);
 void ads129x_finish_data(uint8_t *load_data, uint32_t size);

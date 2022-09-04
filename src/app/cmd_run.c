@@ -85,6 +85,11 @@ static uint8_t performance_test_read(const struct bt_performance_test_metrics *m
     return BT_GATT_ITER_STOP;
 }
 
+/**
+ * @brief Executed every time new data was received from master
+ *
+ * @param met Prt to current metrics values
+ */
 static void performance_test_received(const struct bt_performance_test_metrics *met)
 {
     static uint32_t kb = 0;
@@ -103,7 +108,7 @@ static void performance_test_received(const struct bt_performance_test_metrics *
     if (kb_tmp != kb)
     {
         kb = kb_tmp;
-        LOG_INF("Got next 10kB package (%"PRIu32")...", kb_tmp);
+        LOG_INF("Got next 10kB package (%"PRIu32")...", met->write_len);
     }
 
     // /*
@@ -117,6 +122,11 @@ static void performance_test_received(const struct bt_performance_test_metrics *
     // }
 }
 
+/**
+ * @brief Executed when data is sended back to master
+ *
+ * @param met Ptr to structure with metrics values
+ */
 static void performance_test_send(const struct bt_performance_test_metrics *met)
 {
     LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u kbps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);

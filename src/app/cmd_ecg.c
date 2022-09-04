@@ -1,24 +1,27 @@
 #include <cmd.h>
 #include <spi_adc.h>
+#include <zephyr/logging/log.h>
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
+LOG_MODULE_DECLARE(main);
+
 // add connect command
 static int ecg_data_enable(const struct shell *shell, size_t argc, char **argv)
 {
-    shell_print(shell, "EGC: Data enabled");
     ads129x_start();
     k_msleep(1);
     ads129x_rdatac();
+    LOG_INF("EGC: Data enabled");
 
     return 0;
 }
 
 static int ecg_data_disable(const struct shell *shell, size_t argc, char **argv)
 {
-    shell_print(shell, "EGC: Data disabled");
     ads129x_sdatac();
     k_msleep(1);
     ads129x_stop();
+    LOG_INF("EGC: Data disabled");
 
     return 0;
 }

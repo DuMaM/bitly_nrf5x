@@ -8,6 +8,7 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
+#include <zephyr/logging/log.h>
 
 #include <cmd_run.h>
 #include <cmd.h>
@@ -15,6 +16,7 @@
 
 #include <bt_test.h>
 
+LOG_MODULE_DECLARE(main);
 #define MAX_TEST_SIZE (1800 * 1000)
 
 extern uint8_t test_data_buffer[];
@@ -49,7 +51,7 @@ int test_run_ber(const struct shell *shell,
     err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_BER);
     if (err)
     {
-        shell_error(shell, "Init test failed (err %d)", err);
+        LOG_ERR("Init test failed (err %d)", err);
         return err;
     }
 
@@ -68,30 +70,30 @@ int test_run_ber(const struct shell *shell,
         err = bt_performance_test_write(&performance_test, test_data_buffer, test_data_buffer_size);
         if (err)
         {
-            shell_error(shell, "GATT write failed (err %d)", err);
+            LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
 
         /* print data */
         prog++;
-        shell_print(shell, "(%" PRIu64 ")Sending %" PRIu64 ": %s ...", prog, delta, pattern_string);
+        LOG_INF("(%" PRIu64 ")Sending %" PRIu64 ": %s ...", prog, delta, pattern_string);
         data += test_data_buffer_size;
         delta += k_uptime_delta(&stamp);
     }
 
-    shell_print(shell, "Done");
-    shell_print(shell, "[local] sent %" PRIi64 " bytes (%" PRIi64 " KB) in %" PRIi64 " ms at %" PRIu64 " kbps", data, data / 1024, delta, ((data * 8) / delta));
+    LOG_INF("Done");
+    LOG_INF("[local] sent %" PRIi64 " bytes (%" PRIi64 " KB) in %" PRIi64 " ms at %" PRIu64 " kbps", data, data / 1024, delta, ((data * 8) / delta));
 
     /* read back char from peer and wait to finish it */
     err = bt_performance_test_read(&performance_test);
     if (err)
     {
-        shell_error(shell, "GATT read failed (err %d)", err);
+        LOG_ERR("GATT read failed (err %d)", err);
         return err;
     }
 
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
-    shell_print(shell, "Command finished");
+    LOG_INF("Command finished");
 
     return 0;
 }

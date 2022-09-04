@@ -9,8 +9,10 @@
 #include <performance_test.h>
 #include <spi_adc.h>
 
-
 LOG_MODULE_DECLARE(main);
+
+#ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
+
 static uint32_t bytes_to_send = 1024;
 
 static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
@@ -115,3 +117,14 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     k_work_submit_to_queue(&main_work_q, &test_run_adc);
     return 0;
 }
+
+#else
+
+int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
+{
+    shell_help(shell);
+    LOG_ERR("%s: Command is not supported by this platform", argv[0]);
+    return SHELL_CMD_HELP_PRINTED;
+}
+
+#endif
