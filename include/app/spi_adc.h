@@ -248,6 +248,7 @@ typedef union _ads129x_data_packet_t
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size);
 uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size);
 void ads129x_finish_data(uint8_t *load_data, uint32_t size);
+int8_t ads129x_reset_data(void);
 
 void ads129x_init(void);
 void ads129x_wakeup(void);

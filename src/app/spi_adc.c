@@ -563,6 +563,20 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
     return size;
 }
 
+int8_t ads129x_reset_data(void)
+{
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0)
+    {
+        LOG_ERR("ADS129x: Buffer reset was unsuccessful");
+        return -1;
+    }
+
+    ring_buf_reset(&ads129x_ring_buffer);
+    k_sem_reset(&ads129x_ring_buffer_rdy);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    return 0;
+}
+
 void ads129x_finish_data(uint8_t *load_data, uint32_t size)
 {
     /* Indicate amount of valid data. rx_size can be equal or less than size. */

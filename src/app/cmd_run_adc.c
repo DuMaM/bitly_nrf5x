@@ -28,7 +28,7 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
          * during each transfer
          * also when we change a number o leads
          */
-        if (!ads129x_get_claim_data(&analog_data_ptr, analog_data_size))
+        if (!ads129x_get_data(analog_data_ptr, analog_data_size))
         {
             continue;
         }
@@ -40,8 +40,6 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
             break;
         }
 
-        ads129x_finish_data(analog_data_ptr, analog_data_size);
-        analog_data_ptr = NULL;
         prog += analog_data_size;
     }
     return prog;
@@ -67,6 +65,7 @@ static void test_run(struct k_work *item)
 
     /* get cycle stamp */
     LOG_INF("=== Start analog data transfer ===");
+    ads129x_reset_data();
     stamp = k_uptime_get_32();
     prog = send_test_sim_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
