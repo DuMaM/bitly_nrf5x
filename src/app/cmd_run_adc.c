@@ -17,7 +17,7 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
 {
     uint32_t prog = 0;
     uint8_t *analog_data_ptr = NULL;
-    uint16_t analog_data_size = test_params.data_len->tx_max_len / ADS129x_DATA_BUFFER_SIZE;
+    uint16_t analog_data_size = (test_params.data_len->tx_max_len / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE ;
     int err = 0;
 
     while (prog < _bytes_to_send)
@@ -28,8 +28,7 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
          * during each transfer
          * also when we change a number o leads
          */
-        ads129x_get_data(&analog_data_ptr, analog_data_size);
-        if (!analog_data_ptr)
+        if (!ads129x_get_claim_data(&analog_data_ptr, analog_data_size))
         {
             continue;
         }
@@ -40,6 +39,7 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
             LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
+
         ads129x_finish_data(analog_data_ptr, analog_data_size);
         analog_data_ptr = NULL;
         prog += analog_data_size;
@@ -68,7 +68,7 @@ static void test_run(struct k_work *item)
     /* get cycle stamp */
     LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
-    send_test_sim_data(bytes_to_send);
+    prog = send_test_sim_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
     LOG_INF("Done");
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));

@@ -521,7 +521,7 @@ void ads129x_setup(void)
     gpio_pin_set_dt(&start_spec, 0);
 }
 
-void ads129x_get_data(uint8_t **load_data, uint32_t size)
+uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size)
 {
     /**
      * wait for data be ready to read, there is no need
@@ -532,15 +532,35 @@ void ads129x_get_data(uint8_t **load_data, uint32_t size)
     /**
      * ensure that sufficient data is present
      */
-    if (ring_buf_size_get(&ads129x_ring_buffer) < size)
+    if (ring_buf_size_get(&ads129x_ring_buffer) < size ||
+        k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0)
     {
-        return;
+        return 0;
     }
 
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) == 0)
+    return ring_buf_get_claim(&ads129x_ring_buffer, load_data, size);
+}
+
+uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
+{
+    /**
+     * wait for data be ready to read, there is no need
+     * to keep asking for result when there is nothing in buffer
+     */
+    k_sem_take(&ads129x_ring_buffer_rdy, K_FOREVER);
+
+    /**
+     * ensure that sufficient data is present
+     */
+    if (ring_buf_size_get(&ads129x_ring_buffer) < size ||
+        k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0)
     {
-        size = ring_buf_get_claim(&ads129x_ring_buffer, load_data, ADS129x_DATA_BUFFER_SIZE);
+        return 0;
     }
+
+    size = ring_buf_get(&ads129x_ring_buffer, load_data, size);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    return size;
 }
 
 void ads129x_finish_data(uint8_t *load_data, uint32_t size)
