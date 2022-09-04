@@ -33,7 +33,7 @@ static void test_run(struct k_work *item)
     }
 
     /* get cycle stamp */
-    LOG_INF("Simple test started...");
+    LOG_INF("=== Start simple tests img transfer ===");
     stamp = k_uptime_get_32();
     uint16_t buffer_size = test_data_buffer_size;
     uint8_t *img_prt = NULL;
@@ -81,8 +81,6 @@ static void test_run(struct k_work *item)
 struct k_work test_run_simple;
 int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
-    // return test_run(test_params.conn_param, test_params.phy, test_params.data_len);
-    shell_print(shell, "=== Start simple tests img transfer ===");
     /* initialize work item for test */
     k_work_init(&test_run_simple, test_run);
     k_work_submit_to_queue(&main_work_q, &test_run_simple);

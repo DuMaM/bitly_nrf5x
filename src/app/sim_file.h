@@ -4,7 +4,7 @@
 #pragma once
 
 #define USE_UNSIGNED_SIM
-#define SIM_X 999
+#define SIM_X 1000
 #define SIM_Y 12
 #define SIM_SIZE (SIM_X * SIM_Y)
 

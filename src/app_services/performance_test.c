@@ -69,7 +69,7 @@ static ssize_t write_callback(struct bt_conn *conn,
     met_data->write_len += len;
     met_data->write_rate = ((uint64_t)met_data->write_len << 3) * 1000000000 / delta;
 
-    LOG_DBG("Received data.");
+    LOG_DBG("Received characteristic data.");
 
     if (callbacks && callbacks->data_received)
     {
@@ -92,8 +92,7 @@ static ssize_t read_callback(struct bt_conn *conn,
     {
         callbacks->data_send(metrics);
     }
-
-    LOG_DBG("Data send.");
+    LOG_DBG("Send characteristic data.");
 
     return bt_gatt_attr_read(conn, attr, buf, len, offset, attr->user_data, len);
 }
@@ -112,6 +111,7 @@ static ssize_t descriptor_write_callback(struct bt_conn *conn,
         return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
     }
     memcpy(test_type, buf, sizeof(bt_test_type_t));
+    LOG_DBG("Received descriptor data.");
 
 
     /* reset metrics */
@@ -121,6 +121,12 @@ static ssize_t descriptor_write_callback(struct bt_conn *conn,
     met.write_len = 0;
     met.write_rate = 0;
     met.error_count = -1;
+    LOG_DBG("Metrics got cleared.");
+
+    if (callbacks && callbacks->data_received)
+    {
+        callbacks->data_received(&met);
+    }
 
     switch (*test_type)
     {

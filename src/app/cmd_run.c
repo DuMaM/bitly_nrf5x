@@ -85,6 +85,11 @@ static uint8_t performance_test_read(const struct bt_performance_test_metrics *m
     return BT_GATT_ITER_STOP;
 }
 
+/**
+ * @brief Executed every time new data was received from master
+ *
+ * @param met Prt to current metrics values
+ */
 static void performance_test_received(const struct bt_performance_test_metrics *met)
 {
     static uint32_t kb = 0;
@@ -96,7 +101,6 @@ static void performance_test_received(const struct bt_performance_test_metrics *
         kb = 0;
         kb_line = 0;
         LOG_INF("Test started");
-        return;
     }
 
     /* show progress of data transfer */
@@ -104,7 +108,7 @@ static void performance_test_received(const struct bt_performance_test_metrics *
     if (kb_tmp != kb)
     {
         kb = kb_tmp;
-        LOG_INF("Received 10kb...");
+        LOG_INF("Got next 10kB package (%"PRIu32")...", met->write_len);
     }
 
     // /*
@@ -118,9 +122,14 @@ static void performance_test_received(const struct bt_performance_test_metrics *
     // }
 }
 
+/**
+ * @brief Executed when data is sended back to master
+ *
+ * @param met Ptr to structure with metrics values
+ */
 static void performance_test_send(const struct bt_performance_test_metrics *met)
 {
-    LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u bps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
+    LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u kbps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
 }
 
 const struct bt_performance_test_cb performance_test_cb = {
@@ -167,8 +176,8 @@ int test_init(const struct bt_le_conn_param *conn_param,
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_bt_test,
                                SHELL_CMD(ber_alt, NULL, "Tests ber signal with pattern |11|00|11|00", test_run_ber_alternating_cmd),
                                SHELL_CMD(ber_oppsed, NULL, "Tests ber signal with pattern |10|10|10|10", test_run_ber_oppsed_cmd),
-                               SHELL_CMD(analog_sim, NULL, "Tests with simulated ECC signal", sim_run_cmd),
-                               SHELL_CMD(analog, NULL, "Tests with ECC signal", default_cmd),
+                               SHELL_CMD(sim, NULL, "Tests with simulated ECC signal", sim_run_cmd),
+                               SHELL_CMD(analog, NULL, "Tests with ECC signal", adc_run_cmd),
                                SHELL_CMD(test_picture, NULL, "Tests transition with example picture", test_run_cmd),
                                SHELL_SUBCMD_SET_END);
 
