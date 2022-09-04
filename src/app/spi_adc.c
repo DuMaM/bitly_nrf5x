@@ -25,6 +25,7 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/sys/ring_buffer.h>
 
 #include <spi_adc.h>
 
@@ -64,12 +65,15 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 
 // spi but macros and objects
 #define SPI_NODE DT_NODELABEL(nrf53_spi)
-#define ADS129_SPI_CLOCK_SPEED 4000000UL
-#define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED) // must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
-#define ADS129_SPI_STATUS_WORD_SIZE 3
-#define ADS129x_DATA_BUFFER_SIZE (8 * 3 + ADS129_SPI_STATUS_WORD_SIZE)
 
-uint8_t ADS129X_data[ADS129x_DATA_BUFFER_SIZE];
+// stores n numbers of spi data packet
+// ring buffer size should be bigger then 251 data len
+#define ADS129X_RING_BUFFER_PACKET 12
+#define ADS129X_RING_BUFFER_SIZE (ADS129X_RING_BUFFER_PACKET * ADS129x_DATA_BUFFER_SIZE)
+K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, ADS129x_DATA_BUFFER_SIZE);
+K_MUTEX_DEFINE(ads129x_ring_buffer_mutex);
+RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE);
+
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
     .gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
@@ -241,7 +245,27 @@ void ads129x_sdatac(void)
 void ads129x_read_data(void)
 {
     LOG_DBG("CMD: Read Data");
-    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, ADS129X_data, ADS129x_DATA_BUFFER_SIZE);
+    if (ring_buf_capacity_get(&ads129x_ring_buffer) >= ADS129x_DATA_BUFFER_SIZE)
+    {
+        LOG_ERR("CMD: READ_DATA - There is no space in buffer");
+        return;
+    }
+
+    uint8_t *data = NULL;
+    k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100));
+
+    /* Allocate buffer within a ring buffer memory. */
+    uint16_t size = ring_buf_put_claim(&ads129x_ring_buffer, &data, ADS129x_DATA_BUFFER_SIZE);
+
+    /* do processing */
+    /* NOTE: Work directly on a ring buffer memory */
+    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, data, size);
+
+    /* Indicate amount of valid data. rx_size can be equal or less than size. */
+    ring_buf_put_finish(data, size);
+
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    k_sem_give(&ads129x_ring_buffer_rdy);
 }
 
 /**
@@ -379,7 +403,7 @@ void ads129x_print(bool _print)
 }
 
 #define ADS129X_DATA_LENGTH 9
-void ads129x_dump_data()
+void ads129x_dump_data(uint8_t *input_data)
 {
     static uint32_t data[ADS129X_DATA_LENGTH];
     static char print_buf[ADS129X_DATA_LENGTH * 4 + 1];
@@ -391,9 +415,9 @@ void ads129x_dump_data()
 
         for (int i = 0; i < ADS129X_DATA_LENGTH; i++)
         {
-            data[i] = ADS129X_data[i + 0] << 16;
-            data[i] = ADS129X_data[i + 1] << 8;
-            data[i] = ADS129X_data[i + 2];
+            data[i] = input_data[i + 0] << 16;
+            data[i] = input_data[i + 1] << 8;
+            data[i] = input_data[i + 2];
             print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%" PRIu32 " ", data[i]);
         }
         LOG_INF("Data: %s", print_buf);
@@ -497,13 +521,41 @@ void ads129x_setup(void)
     gpio_pin_set_dt(&start_spec, 0);
 }
 
+void ads129x_get_data(uint8_t **load_data, uint32_t size)
+{
+    /**
+     * wait for data be ready to read, there is no need
+     * to keep asking for result when there is nothing in buffer
+     */
+    k_sem_take(&ads129x_ring_buffer_rdy, K_FOREVER);
+
+    /**
+     * ensure that sufficient data is present
+     */
+    if (ring_buf_size_get(&ads129x_ring_buffer) < size)
+    {
+        return;
+    }
+
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) == 0)
+    {
+        size = ring_buf_get_claim(&ads129x_ring_buffer, load_data, ADS129x_DATA_BUFFER_SIZE);
+    }
+}
+
+void ads129x_finish_data(uint8_t *load_data, uint32_t size)
+{
+    /* Indicate amount of valid data. rx_size can be equal or less than size. */
+    ring_buf_get_finish(&ads129x_ring_buffer, size);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+}
+
 void ads129x_main_thread(void)
 {
     ads129x_setup();
-
-    struct spi_buf ads129x_rx_bufs[] = {{.buf = ADS129X_data, .len = ADS129x_DATA_BUFFER_SIZE}};
+    struct spi_buf ads129x_rx_bufs[] = {{.buf = NULL, .len = ADS129x_DATA_BUFFER_SIZE}};
     struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
-
+    uint16_t size = 0;
     for (;;)
     {
         /*
@@ -511,23 +563,31 @@ void ads129x_main_thread(void)
          * go to next loop iteration (the semaphore might have been given
          * again); else, make the CPU idle.
          */
-        unsigned int key = irq_lock();
-        if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0)
+        if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0 && ring_buf_capacity_get(&ads129x_ring_buffer) >= ADS129x_DATA_BUFFER_SIZE)
         {
-            irq_unlock(key);
+            k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100));
+
+            /* Allocate buffer within a ring buffer memory. */
+            size = ring_buf_put_claim(&ads129x_ring_buffer, (uint8_t **)&ads129x_rx_bufs[0].buf, ADS129x_DATA_BUFFER_SIZE);
 
             /* do processing */
+            /* NOTE: Work directly on a ring buffer memory */
             int ret = spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
             if (!ret)
             {
-                ads129x_dump_data();
+                ads129x_dump_data(ads129x_rx_bufs[0].buf);
             }
+
+            /* Indicate amount of valid data. rx_size can be equal or less than size. */
+            ring_buf_put_finish(&ads129x_ring_buffer, size);
+
+            k_mutex_unlock(&ads129x_ring_buffer_mutex);
+            k_sem_give(&ads129x_ring_buffer_rdy);
         }
         else
         {
             /* put CPU to sleep to save power */
-            k_cpu_atomic_idle(key);
-            // k_usleep(100);
+            k_usleep(100);
         }
     }
 }

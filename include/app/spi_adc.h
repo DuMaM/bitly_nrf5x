@@ -219,6 +219,35 @@
 #define ADS129X_SAMPLERATE_32 0x1
 #define ADS129X_SAMPLERATE_16 0x0
 
+#define ADS129_SPI_CLOCK_SPEED 4000000UL
+#define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED) // must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
+#define ADS129_SPI_STATUS_WORD_NUM 1
+#define ADS129_SPI_DATA_PACKAGES_NUM 8
+#define ADS129_SPI_DATA_NUM (ADS129_SPI_DATA_PACKAGES_NUM + ADS129_SPI_STATUS_WORD_NUM)
+#define ADS129x_DATA_BUFFER_SIZE (ADS129_SPI_DATA_NUM * 3)
+
+typedef union _ads129x_data_packet_t
+{
+    uint8_t packet[ADS129x_DATA_BUFFER_SIZE];
+    struct _pack_struct
+    {
+        uint32_t status : 24;
+        uint32_t v1_c1 : 24;
+        uint32_t v2_c2 : 24;
+        uint32_t v3_c3 : 24;
+        uint32_t v4_c4 : 24;
+        uint32_t v5_c5 : 24;
+        uint32_t v6_c6 : 24;
+
+        uint32_t ra_r : 24;
+        uint32_t la_l : 24;
+        uint32_t rl_n : 24;
+        uint32_t ll_f : 24;
+    };
+} ads129x_data_packet_t;
+void ads129x_get_data(uint8_t **load_data, uint32_t size);
+void ads129x_finish_data(uint8_t *load_data, uint32_t size);
+
 void ads129x_init(void);
 void ads129x_wakeup(void);
 void ads129x_standby(void);
@@ -231,7 +260,7 @@ void ads129x_sdatac(void);
 void ads129x_read_data(void);
 void ads129x_write_data(void);
 
-int ads129x_read_registers(uint8_t _address, uint8_t _n, uint8_t* _value);
+int ads129x_read_registers(uint8_t _address, uint8_t _n, uint8_t *_value);
 int ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value);
 
 void ads129x_read_data_continuous(void);
@@ -239,7 +268,7 @@ void ads129x_write_data_continuous(void);
 void ads129x_read_data_single(void);
 void ads129x_write_data_single(void);
 
-int ads129x_get_device_id(uint8_t* dev_id);
+int ads129x_get_device_id(uint8_t *dev_id);
 void ads129x_setup();
 void ads129x_print(bool _print);
 
