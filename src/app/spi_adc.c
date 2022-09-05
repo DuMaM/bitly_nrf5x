@@ -27,6 +27,10 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/ring_buffer.h>
 
+/**
+ * WARN: ADS129x is using BIG_ENDIAN
+ * Where most of arms is using a little_endian
+ */
 #include <spi_adc.h>
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
@@ -68,16 +72,16 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 
 // stores n numbers of spi data packet
 // ring buffer size should be bigger then 251 data len
-#define ADS129X_RING_BUFFER_PACKET 12
-#define ADS129X_RING_BUFFER_SIZE (ADS129X_RING_BUFFER_PACKET * ADS129x_DATA_BUFFER_SIZE)
-K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, ADS129x_DATA_BUFFER_SIZE);
+#define ADS129X_RING_BUFFER_PACKET ((uint8_t)(251 / ADS129x_DATA_BUFFER_SIZE) + ADS129X_SPI_PACKAGE_NUM)
+#define ADS129X_RING_BUFFER_SIZE (ADS129X_RING_BUFFER_PACKET * 3)
+K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, ADS129X_RING_BUFFER_PACKET);
 K_MUTEX_DEFINE(ads129x_ring_buffer_mutex);
 RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE);
 
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
     .gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
-    .delay = ADS129_SPI_CLOCK_DELAY,
+    .delay = ADS129X_SPI_CLOCK_DELAY,
     .gpio_pin = 4,
     .gpio_dt_flags = GPIO_ACTIVE_LOW};
 
@@ -86,7 +90,7 @@ const struct spi_cs_control ads129x_cs_ctrl = {
 // Clock Polarity (CPOL)    Clock Phase (CPHA)	Output Edge     Data Capture
 // 0                        1                   Rising          Falling
 struct spi_config ads129x_spi_cfg = {
-    .frequency = ADS129_SPI_CLOCK_SPEED,
+    .frequency = ADS129X_SPI_CLOCK_SPEED,
     .operation = SPI_OP_MODE_MASTER | SPI_MODE_CPHA | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
     .cs = &ads129x_cs_ctrl};
 
@@ -115,6 +119,61 @@ struct spi_config ads129x_spi_cfg = {
  */
 #define WRITE_BIT_VAL(var, bit, set) \
     ((var) = (set) ? ((var) | bit) : ((var) & ~bit))
+
+static inline uint32_t conv_raw_to_u24(uint8_t *raw, uint16_t pos)
+{
+    return (((uint32_t)raw[pos + 0]) << 16) +
+           (((uint32_t)raw[pos + 1]) << 8) +
+           (((uint32_t)raw[pos + 2]) << 0);
+}
+
+static inline int32_t conv_u24_to_i32(uint32_t u24_val)
+{
+    return ((int32_t)(u24_val << 8)) >> 8;
+}
+
+static inline uint32_t conv_i32_to_u24(int32_t i32_val)
+{
+    return ((uint32_t)(i32_val << 8)) >> 8;
+}
+
+static inline uint8_t *conv_u24_to_raw(uint32_t u24_val, uint8_t *raw, uint16_t pos)
+{
+    raw[pos + 0] = 0xFF && (u24_val >> 16);
+    raw[pos + 1] = 0xFF && (u24_val >> 8);
+    raw[pos + 2] = 0xFF && (u24_val >> 0);
+    return raw + pos;
+}
+
+static inline int32_t ads129x_get_leadI(uint8_t *data_buffer)
+{
+    return conv_u24_to_i32(conv_raw_to_u24(data_buffer, ADS129x_LEAD1_OFFSET));
+}
+
+static inline int32_t ads129x_get_leadII(uint8_t *data_buffer)
+{
+    return conv_u24_to_i32(conv_raw_to_u24(data_buffer, ADS129x_LEAD2_OFFSET));
+}
+
+static inline uint32_t ads129x_get_leadIII(int32_t lead1, int32_t lead2)
+{
+    return conv_i32_to_u24(lead1 - lead2);
+}
+
+static inline uint32_t ads129x_get_aVR(int32_t lead1, int32_t lead2)
+{
+    return conv_i32_to_u24((lead1 + lead2) / -2);
+}
+
+static inline uint32_t ads129x_get_aVL(int32_t lead1, int32_t lead2)
+{
+    return conv_i32_to_u24((lead2 - lead1) / 2);
+}
+
+static inline uint32_t ads129x_get_aVF(int32_t lead1, int32_t lead2)
+{
+    return conv_i32_to_u24((lead2 - lead1) / 2);
+}
 
 static int ads129x_access(const struct device *_spi,
                           struct spi_config *_spi_cfg,
@@ -198,7 +257,7 @@ void ads129x_reset(void)
     LOG_DBG("CMD: Reset");
     ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RESET, NULL, 0);
     // must wait 18 tCLK cycles to execute this command (Datasheet, pg. 38)
-    k_usleep(ADS129_SPI_CLOCK_DELAY * 5);
+    k_usleep(ADS129X_SPI_CLOCK_DELAY * 5);
 }
 
 /**
@@ -259,10 +318,19 @@ void ads129x_read_data(void)
 
     /* do processing */
     /* NOTE: Work directly on a ring buffer memory */
-    ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, data, size);
-
+    int ret = ads129x_access(ads129x_spi, &ads129x_spi_cfg, ADS129X_CMD_RDATA, data, size);
+    if (!ret)
+    {
+        /* add missing leads */
+        int32_t lead1 = ads129x_get_leadI(data);
+        int32_t lead2 = ads129x_get_leadII(data);
+        conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), data, ADS129x_LEAD3_OFFSET);
+        conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), data, ADS129x_AVR_OFFSET);
+        conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), data, ADS129x_AVL_OFFSET);
+        conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), data, ADS129x_AVF_OFFSET);
+    }
     /* Indicate amount of valid data. rx_size can be equal or less than size. */
-    ring_buf_put_finish(data, size);
+    ring_buf_put_finish(&ads129x_ring_buffer, size);
 
     k_mutex_unlock(&ads129x_ring_buffer_mutex);
     k_sem_give(&ads129x_ring_buffer_rdy);
@@ -402,23 +470,20 @@ void ads129x_print(bool _print)
     ads129x_print_data = _print;
 }
 
-#define ADS129X_DATA_LENGTH 9
 void ads129x_dump_data(uint8_t *input_data)
 {
-    static uint32_t data[ADS129X_DATA_LENGTH];
-    static char print_buf[ADS129X_DATA_LENGTH * 4 + 1];
+    int32_t data[ADS129X_DATA_NUM];
+    char print_buf[ADS129X_DATA_NUM * 10 + 1];
 
     if (ads129x_print_data)
     {
         uint8_t print_buf_pos = 0;
         memset(data, 0, sizeof(data));
 
-        for (int i = 0; i < ADS129X_DATA_LENGTH; i++)
+        for (int i = 0; i < ADS129X_DATA_NUM; i++)
         {
-            data[i] = input_data[i + 0] << 16;
-            data[i] = input_data[i + 1] << 8;
-            data[i] = input_data[i + 2];
-            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%" PRIu32 " ", data[i]);
+            data[i] = conv_u24_to_i32(conv_raw_to_u24(input_data, i * 3));
+            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%" PRIi32 " ", data[i]);
         }
         LOG_INF("Data: %s", print_buf);
     }
@@ -431,7 +496,7 @@ void ads129x_init(void)
 {
     // SPI Setup
     int ret;
-    LOG_INF("ASD129x spi init\n");
+    LOG_INF("ADS129X spi init\n");
     if (!device_is_ready(ads129x_spi))
     {
         LOG_ERR("SPI device %s is not ready\n", ads129x_spi->name);
@@ -587,9 +652,12 @@ void ads129x_finish_data(uint8_t *load_data, uint32_t size)
 void ads129x_main_thread(void)
 {
     ads129x_setup();
-    struct spi_buf ads129x_rx_bufs[] = {{.buf = NULL, .len = ADS129x_DATA_BUFFER_SIZE}};
+    struct spi_buf ads129x_rx_bufs[] = {{.buf = NULL, .len = ADS129X_SPI_PACKAGE_SIZE}};
     struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
     uint16_t size = 0;
+    uint32_t lead1 = 0;
+    uint32_t lead2 = 0;
+
     for (;;)
     {
         /*
@@ -597,6 +665,7 @@ void ads129x_main_thread(void)
          * go to next loop iteration (the semaphore might have been given
          * again); else, make the CPU idle.
          */
+
         if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0 && ring_buf_capacity_get(&ads129x_ring_buffer) >= ADS129x_DATA_BUFFER_SIZE)
         {
             k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100));
@@ -609,6 +678,14 @@ void ads129x_main_thread(void)
             int ret = spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
             if (!ret)
             {
+                /* add missing leads */
+                lead1 = ads129x_get_leadI((uint8_t *)ads129x_rx_bufs[0].buf);
+                lead2 = ads129x_get_leadII((uint8_t *)ads129x_rx_bufs[0].buf);
+                conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_LEAD3_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_AVR_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_AVL_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_AVF_OFFSET);
+
                 ads129x_dump_data(ads129x_rx_bufs[0].buf);
             }
 

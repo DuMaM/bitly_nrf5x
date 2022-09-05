@@ -219,28 +219,49 @@
 #define ADS129X_SAMPLERATE_32 0x1
 #define ADS129X_SAMPLERATE_16 0x0
 
-#define ADS129_SPI_CLOCK_SPEED 4000000UL
-#define ADS129_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129_SPI_CLOCK_SPEED) // must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
-#define ADS129_SPI_STATUS_WORD_NUM 1
-#define ADS129_SPI_DATA_PACKAGES_NUM 8
-#define ADS129_SPI_DATA_NUM (ADS129_SPI_DATA_PACKAGES_NUM + ADS129_SPI_STATUS_WORD_NUM)
-#define ADS129x_DATA_BUFFER_SIZE (ADS129_SPI_DATA_NUM * 3)
+#define ADS129X_SPI_CLOCK_SPEED 4000000UL
+#define ADS129X_SPI_CLOCK_DELAY ((1000000 * 8) / ADS129X_SPI_CLOCK_SPEED) // must send at least 4 tCLK cycles before sending another command (Datasheet, pg. 38)
+#define ADS129X_SPI_STATUS_WORD_NUM 1
+#define ADS129X_SPI_DATA_PACKAGES_NUM 8
+#define ADS129X_SPI_PACKAGE_NUM (ADS129X_SPI_DATA_PACKAGES_NUM + ADS129X_SPI_STATUS_WORD_NUM)
+#define ADS129X_SPI_PACKAGE_SIZE (ADS129X_SPI_PACKAGE_NUM * 3)
+
+#define ADS129X_AUGMENTED_LEAD_NUM 4
+#define ADS129X_DATA_NUM (ADS129X_SPI_DATA_PACKAGES_NUM + ADS129X_SPI_STATUS_WORD_NUM + ADS129X_AUGMENTED_LEAD_NUM)
+#define ADS129x_DATA_BUFFER_SIZE (ADS129X_DATA_NUM * 3)
 
 typedef struct _packet_12lead
 {
     uint32_t status : 24;
-    uint32_t v1_c1 : 24;
+    uint32_t v6_c6 : 24;
+    uint32_t lead1 : 24;
+    uint32_t lead2 : 24;
     uint32_t v2_c2 : 24;
     uint32_t v3_c3 : 24;
     uint32_t v4_c4 : 24;
     uint32_t v5_c5 : 24;
-    uint32_t v6_c6 : 24;
+    uint32_t v1_c1 : 24;
 
-    uint32_t ra_r : 24;
-    uint32_t la_l : 24;
-    uint32_t rl_n : 24;
-    uint32_t ll_f : 24;
+    uint32_t lead3 : 24;
+    uint32_t aVR : 24;
+    uint32_t aVL : 24;
+    uint32_t aVF : 24;
 } packet_12lead_t;
+
+#define ADS129x_STATUS_OFFSET (1 * 3)
+#define ADS129x_V6_OFFSET (1 * 3)
+#define ADS129x_LEAD1_OFFSET (2 * 3)
+#define ADS129x_LEAD2_OFFSET (3 * 3)
+#define ADS129x_V2_OFFSET (4 * 3)
+#define ADS129x_V3_OFFSET (5 * 3)
+#define ADS129x_V4_OFFSET (6 * 3)
+#define ADS129x_V5_OFFSET (7 * 3)
+#define ADS129x_V1_OFFSET (8 * 3)
+
+#define ADS129x_LEAD3_OFFSET (9 * 3)
+#define ADS129x_AVR_OFFSET (10 * 3)
+#define ADS129x_AVL_OFFSET (11 * 3)
+#define ADS129x_AVF_OFFSET (12 * 3)
 
 typedef union _ads129x_data_packet_t
 {
