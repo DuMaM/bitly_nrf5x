@@ -115,12 +115,47 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
     }
 
     test_params.data_len->tx_max_len = data_len;
-    test_params.data_len->tx_max_time = BT_GAP_DATA_TIME_MAX;
 
     shell_print(shell, "LE Data Packet Length set to: %d", data_len);
 
     k_work_init(&cmd_data_len_work, config_update_len);
     k_work_submit_to_queue(&main_work_q, &cmd_data_len_work);
+
+    return 0;
+}
+
+struct k_work cmd_data_time_work;
+static int cmd_data_timing(const struct shell *shell, size_t argc, char **argv)
+{
+    uint16_t data_time;
+
+    if (argc == 1)
+    {
+        shell_help(shell);
+        return SHELL_CMD_HELP_PRINTED;
+    }
+
+    if (argc > 2)
+    {
+        shell_error(shell, "%s: bad parameters count", argv[0]);
+        return -EINVAL;
+    }
+
+    data_time = strtol(argv[1], NULL, 10);
+
+    if ((data_time < BT_GAP_DATA_TIME_DEFAULT) || (data_time > BT_GAP_DATA_TIME_MAX))
+    {
+        shell_error(shell, "%s: Invalid setting: %d", argv[0], data_time);
+        shell_error(shell, "LE Data Packet time must be between: %d and %d", BT_GAP_DATA_TIME_DEFAULT, BT_GAP_DATA_TIME_MAX);
+        return -EINVAL;
+    }
+
+    test_params.data_len->tx_max_time = data_time;
+
+    shell_print(shell, "LE Data Packet Time set to: %d", data_time);
+
+    k_work_init(&cmd_data_time_work, config_update_len);
+    k_work_submit_to_queue(&main_work_q, &cmd_data_time_work);
 
     return 0;
 }
@@ -221,6 +256,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
                                SHELL_CMD(data_length, NULL, "Configure data length", cmd_data_len),
+                               SHELL_CMD(data_time, NULL, "Configure data frame timing", cmd_data_timing),
                                SHELL_CMD(conn_interval, NULL, "Configure connection interval <1.25ms units>", cmd_conn_interval),
                                SHELL_CMD(phy, &phy_sub, "Configure connection interval", default_cmd),
                                SHELL_CMD(rssi, NULL, "RSSI configuration y/n", rssi_cmd),
