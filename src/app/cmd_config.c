@@ -27,7 +27,7 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_init(&cmd_phy_work, config_update_phy);
     k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
@@ -41,7 +41,7 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_init(&cmd_phy_work, config_update_phy);
     k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
@@ -56,7 +56,7 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_init(&cmd_phy_work, config_update_phy);
     k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
@@ -76,7 +76,7 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s",
                 phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_param);
+    k_work_init(&cmd_phy_work, config_update_phy);
     k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
 
     return 0;
