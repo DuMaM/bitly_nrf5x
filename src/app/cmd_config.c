@@ -14,7 +14,7 @@ test_params_t test_params = {
     // BT_LE_CONNECTION IS A WORKAROUND ON CHECKING MULTIPLE PARAM NEGOTIATION
     .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT),
     .phy = BT_CONN_LE_PHY_PARAM_2M,
-    .data_len = BT_LE_DATA_LEN_PARAM_MAX,
+    .data_len = BT_CONN_LE_DATA_LEN_PARAM(251,1060),
     .enable_rssi = true,
 };
 

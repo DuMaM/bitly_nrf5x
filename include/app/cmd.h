@@ -8,8 +8,8 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#define INTERVAL_MIN 0x140 /* 320 units, 400 ms */
-#define INTERVAL_MAX 0x140 /* 320 units, 400 ms */
+#define INTERVAL_MIN 28 /* 320 units, 400 ms */
+#define INTERVAL_MAX 28 /* 320 units, 400 ms */
 #define CONN_LATENCY 0
 #define UNIT_SCALER 1.25
 
