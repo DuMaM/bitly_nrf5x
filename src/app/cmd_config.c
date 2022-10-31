@@ -233,12 +233,15 @@ static int rssi_cmd(const struct shell *shell, size_t argc, char **argv)
 static int print_cmd(const struct shell *shell, size_t argc,
                      char **argv)
 {
-    shell_print(shell, "==== Current test configuration ====\n");
-    shell_print(shell, "Data length:\t\t%d\n"
-                       "Connection interval:\t%d units\n"
-                       "Preferred PHY:\t\t%s\n",
+    shell_print(shell,  "==== Current test configuration ====\n");
+    shell_print(shell,  "Data length:\t\t%d\n"
+                        "Data time:\t\t%d\n"
+                        "Connection interval:\t%d units (ms %d)\n"
+                        "Preferred PHY:\t\t%s\n",
                 test_params.data_len->tx_max_len,
+                test_params.data_len->tx_max_time,
                 test_params.conn_param->interval_min,
+                (int)(test_params.conn_param->interval_min * 1.25),
                 phy_str(test_params.phy));
     return 0;
 }
