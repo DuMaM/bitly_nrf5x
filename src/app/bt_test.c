@@ -382,13 +382,13 @@ static void le_phy_updated(struct bt_conn *conn,
 static void le_data_length_updated(struct bt_conn *conn,
                                    struct bt_conn_le_data_len_info *info)
 {
-    LOG_INF("[%s] LE data len updated: TX (len: %d time: %d) RX (len: %d time: %d), done: %" PRId64,
+    LOG_INF("[%s] LE data len updated: TX (len: %d time: %d) RX (len: %d time: %d), done: %" PRIu32,
             bt_test_req_data_len ? "local" : "external",
             info->tx_max_len,
             info->tx_max_time,
             info->rx_max_len,
             info->rx_max_time,
-            k_uptime_ticks());
+            k_uptime_get_32());
 
     if (bt_test_req_data_len)
     {
@@ -438,7 +438,7 @@ void config_update_len(struct k_work *item)
         return;
     }
 
-    LOG_INF("LE Data length update pending, since %" PRId64, k_uptime_ticks());
+    LOG_INF("LE Data length update pending, since %" PRIu32, k_uptime_get_32());
     bt_test_req_data_len = true;
     err = bt_conn_le_data_len_update(default_conn, data_len);
     if (err)
@@ -489,7 +489,7 @@ void config_update_param(struct k_work *item)
         LOG_INF("LE Connection parameters updated");
     }
 
-    LOG_INF("Connection parameters updated, till %" PRId64, k_uptime_ticks());
+    LOG_INF("Connection parameters updated, till %" PRIu32, k_uptime_get_32());
 }
 
 int connection_configuration_set()
