@@ -7,6 +7,8 @@
 #include <zephyr/logging/log.h>
 
 #include <performance_test.h>
+#include <app_utils.h>
+
 #include "sim_file.h"
 
 extern uint8_t test_data_buffer[];

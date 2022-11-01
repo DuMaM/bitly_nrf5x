@@ -32,6 +32,7 @@
  * Where most of arms is using a little_endian
  */
 #include <spi_adc.h>
+#include <app_utils.h>
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
 
@@ -119,31 +120,6 @@ struct spi_config ads129x_spi_cfg = {
  */
 #define WRITE_BIT_VAL(var, bit, set) \
     ((var) = (set) ? ((var) | bit) : ((var) & ~bit))
-
-static inline uint32_t conv_raw_to_u24(uint8_t *raw, uint16_t pos)
-{
-    return (((uint32_t)raw[pos + 0]) << 16) +
-           (((uint32_t)raw[pos + 1]) << 8) +
-           (((uint32_t)raw[pos + 2]) << 0);
-}
-
-static inline int32_t conv_u24_to_i32(uint32_t u24_val)
-{
-    return ((int32_t)(u24_val << 8)) >> 8;
-}
-
-static inline uint32_t conv_i32_to_u24(int32_t i32_val)
-{
-    return ((uint32_t)(i32_val << 8)) >> 8;
-}
-
-static inline uint8_t *conv_u24_to_raw(uint32_t u24_val, uint8_t *raw, uint16_t pos)
-{
-    raw[pos + 0] = 0xFF && (u24_val >> 16);
-    raw[pos + 1] = 0xFF && (u24_val >> 8);
-    raw[pos + 2] = 0xFF && (u24_val >> 0);
-    return raw + pos;
-}
 
 static inline int32_t ads129x_get_leadI(uint8_t *data_buffer)
 {
