@@ -14,46 +14,77 @@
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 static uint8_t test_runs = 1;
+int64_t stamp;
 
 LOG_MODULE_DECLARE(main);
 
 #define SIM_VALUE_BYTE_SIZE 3
+
+static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
+    #if SIM_VALUE_BYTE_SIZE >= 1
+                *(buffer + 0) = (uint8_t)(*(data));
+    #endif
+    #if SIM_VALUE_BYTE_SIZE >= 2
+                *(buffer + 1) = (uint8_t)(*(data) >> 8);
+    #endif
+    #if SIM_VALUE_BYTE_SIZE >= 3
+                *(buffer + 2) = (uint8_t)(*(data) >> 16);
+    #endif
+    #if SIM_VALUE_BYTE_SIZE >= 4
+                *(buffer + 3) = (uint8_t)((*data) >> 24);
+    #endif
+
+    return SIM_VALUE_BYTE_SIZE;
+}
+
 static uint32_t send_test_sim_data()
 {
-    uint32_t prog = 0;
+    uint32_t sim_prog = 0;
     uint16_t buffer_size = 0;
-    uint32_t *sim_ptr = NULL;
+    uint32_t sim_written = 0;
     int err = 0;
 
-    while (prog < SIM_SIZE)
+    // treat data as one block of memory thanks to [] operator
+    uint32_t *sim_ptr = ((uint32_t *)sim_data);
+
+    while (sim_prog < SIM_SIZE)
     {
-        sim_ptr = ((uint32_t *)sim_data) + prog;
-        if ((SIM_SIZE - prog) * SIM_VALUE_BYTE_SIZE > test_data_buffer_size)
+        /* 
+         * if we are in middle of a buffer
+         * set max buffer value as input
+         * and update index of sim data
+         */
+        if ((SIM_SIZE - sim_prog) * SIM_VALUE_BYTE_SIZE > test_data_buffer_size)
         {
             buffer_size = test_data_buffer_size;
             buffer_size -= buffer_size % SIM_VALUE_BYTE_SIZE;
-            prog += buffer_size / SIM_VALUE_BYTE_SIZE;
-        }
-        else
-        {
-            buffer_size = (SIM_SIZE - prog) * 3;
-            prog += SIM_SIZE - prog;
         }
 
-        for (int i = 0, j = 0; i < buffer_size; i = i + SIM_VALUE_BYTE_SIZE, j++)
+        /* otherwise use only remaining sim data values */
+        else
         {
-#if SIM_VALUE_BYTE_SIZE >= 1
-            test_data_buffer[i] = sim_ptr[j];
-#endif
-#if SIM_VALUE_BYTE_SIZE >= 2
-            test_data_buffer[i + 1] = sim_ptr[j] >> 8;
-#endif
-#if SIM_VALUE_BYTE_SIZE >= 3
-            test_data_buffer[i + 2] = sim_ptr[j] >> 16;
-#endif
-#if SIM_VALUE_BYTE_SIZE >= 4
-            test_data_buffer[i + 3] = sim_ptr[j] >> 24;
-#endif
+            buffer_size = (SIM_SIZE - sim_prog) * 3;
+        }
+
+
+        for (int i = 0; i < buffer_size; i = i + SIM_VALUE_BYTE_SIZE, sim_prog++)
+        {
+            if (!(sim_prog % SIM_Y)) {
+                /* add timestamp before every record */
+                uint32_t data_stamp = k_uptime_get_32() - stamp;
+                sim_written += write_data_to_buffer(test_data_buffer + i, &data_stamp);
+
+                /* record new value in buffer */
+                i = i + SIM_VALUE_BYTE_SIZE;
+
+                /* check if we still in buffer */
+                if (!(i < buffer_size)) {
+                    // sim_prog will not be bumped here
+                    break;
+                }
+            }
+
+            sim_written += write_data_to_buffer(test_data_buffer + i, sim_ptr + sim_prog);
         }
 
         err = bt_performance_test_write(&performance_test, test_data_buffer, buffer_size);
@@ -63,7 +94,7 @@ static uint32_t send_test_sim_data()
             break;
         }
     }
-    return SIM_VALUE_BYTE_SIZE * prog;
+    return sim_written;
 }
 
 static void test_run(struct k_work *item)
@@ -72,7 +103,6 @@ static void test_run(struct k_work *item)
     const struct bt_conn_le_phy_param *phy = test_params.phy;
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
 
-    int64_t stamp;
     int64_t delta;
     uint32_t prog = 0;
 
