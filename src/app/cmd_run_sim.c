@@ -40,6 +40,9 @@ static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
 static uint32_t send_test_sim_data()
 {
     uint32_t sim_prog = 0;
+    bool sim_skip_timestamp = false; // becasue there are times when timestamp is added as a last one
+                                    // loop finishes cycle and then it's added again
+                                    // this ruins a code structure so we want protect it whitout big changes
     uint16_t buffer_size = 0;
     uint32_t sim_written = 0;
     int err = 0;
@@ -69,7 +72,7 @@ static uint32_t send_test_sim_data()
 
         for (int i = 0; i < buffer_size; i = i + SIM_VALUE_BYTE_SIZE, sim_prog++)
         {
-            if (!(sim_prog % SIM_Y)) {
+            if (!(sim_prog % SIM_Y) && !sim_skip_timestamp) {
                 /* add timestamp before every record */
                 uint32_t data_stamp = k_uptime_get_32() - stamp;
                 sim_written += write_data_to_buffer(test_data_buffer + i, &data_stamp);
@@ -79,11 +82,12 @@ static uint32_t send_test_sim_data()
 
                 /* check if we still in buffer */
                 if (!(i < buffer_size)) {
+                    sim_skip_timestamp = true;
                     // sim_prog will not be bumped here
                     break;
                 }
             }
-
+            sim_skip_timestamp = false;
             sim_written += write_data_to_buffer(test_data_buffer + i, sim_ptr + sim_prog);
         }
 
