@@ -20,7 +20,7 @@
 
 LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 
-static struct bt_performance_test_metrics met;
+static bt_performance_test_metrics_t met;
 static bt_test_type_t test_type;
 static const struct bt_performance_test_cb *callbacks;
 
@@ -32,12 +32,12 @@ static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
                        struct bt_gatt_read_params *params, const void *data,
                        uint16_t len)
 {
-    struct bt_performance_test_metrics metrics;
-    memset(&metrics, 0, sizeof(struct bt_performance_test_metrics));
+    bt_performance_test_metrics_t metrics;
+    memset(&metrics, 0, sizeof(bt_performance_test_metrics_t));
 
     if (data)
     {
-        len = MIN(len, sizeof(struct bt_performance_test_metrics));
+        len = MIN(len, sizeof(bt_performance_test_metrics_t));
         memcpy(&metrics, data, len);
 
         if (callbacks && callbacks->data_read)
@@ -60,7 +60,7 @@ static ssize_t write_callback(struct bt_conn *conn,
 
     uint64_t delta;
 
-    struct bt_performance_test_metrics *met_data = attr->user_data;
+    bt_performance_test_metrics_t *met_data = attr->user_data;
 
     delta = k_cycle_get_32() - clock_cycles;
     delta = k_cyc_to_ns_floor64(delta);
@@ -84,9 +84,9 @@ static ssize_t read_callback(struct bt_conn *conn,
                              const struct bt_gatt_attr *attr, void *buf,
                              uint16_t len, uint16_t offset)
 {
-    const struct bt_performance_test_metrics *metrics = attr->user_data;
+    const bt_performance_test_metrics_t *metrics = attr->user_data;
 
-    len = MIN(sizeof(struct bt_performance_test_metrics), len);
+    len = MIN(sizeof(bt_performance_test_metrics_t), len);
 
     if (callbacks && callbacks->data_send)
     {

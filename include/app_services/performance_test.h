@@ -25,7 +25,7 @@ extern "C"
 #endif
 
     /** @brief Performance test metrics. */
-    struct bt_performance_test_metrics
+    typedef struct __attribute__((__packed__)) bt_performance_test_metrics
     {
         /** Number of GATT writes received. */
         uint32_t write_count;
@@ -37,8 +37,8 @@ extern "C"
         uint32_t write_rate;
 
         /** error count if BER is enabled. **/
-        int32_t error_count;
-    };
+        uint32_t error_count;
+    } bt_performance_test_metrics_t;
 
     /** @brief Performance test callback structure. */
     struct bt_performance_test_cb
@@ -53,7 +53,7 @@ extern "C"
          * @retval BT_GATT_ITER_CONTINUE To keep notifications enabled.
          * @retval BT_GATT_ITER_STOP To disable notifications.
          */
-        uint8_t(*data_read)(const struct bt_performance_test_metrics* met);
+        uint8_t(*data_read)(const bt_performance_test_metrics_t* met);
 
         /** @brief Data received callback.
          *
@@ -62,7 +62,7 @@ extern "C"
          *
          * @param[in] met Performance test metrics.
          */
-        void (*data_received)(const struct bt_performance_test_metrics* met);
+        void (*data_received)(const bt_performance_test_metrics_t* met);
 
         /** @brief Data send callback.
          *
@@ -71,7 +71,7 @@ extern "C"
          *
          * @param[in] met Performance test metrics.
          */
-        void (*data_send)(const struct bt_performance_test_metrics* met);
+        void (*data_send)(const bt_performance_test_metrics_t* met);
     };
 
     typedef enum

@@ -77,7 +77,7 @@ static void get_tx_power(struct bt_conn *conn)
     }
 }
 
-static uint8_t performance_test_read(const struct bt_performance_test_metrics *met)
+static uint8_t performance_test_read(const bt_performance_test_metrics_t *met)
 {
     LOG_INF("[peer] received %u bytes (%u KB) in %u GATT writes at %u kbps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
     k_sem_give(&cmd_sync_sem);
@@ -90,7 +90,7 @@ static uint8_t performance_test_read(const struct bt_performance_test_metrics *m
  *
  * @param met Prt to current metrics values
  */
-static void performance_test_received(const struct bt_performance_test_metrics *met)
+static void performance_test_received(const bt_performance_test_metrics_t *met)
 {
     static uint32_t kb = 0;
     static uint16_t kb_line = 0;
@@ -127,7 +127,7 @@ static void performance_test_received(const struct bt_performance_test_metrics *
  *
  * @param met Ptr to structure with metrics values
  */
-static void performance_test_send(const struct bt_performance_test_metrics *met)
+static void performance_test_send(const bt_performance_test_metrics_t *met)
 {
     LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u kbps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
 }
