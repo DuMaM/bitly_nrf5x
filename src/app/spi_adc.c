@@ -540,8 +540,13 @@ void ads129x_setup(void)
 
     // device wakes up in RDATAC mode, so send stop signal
     ads129x_sdatac();
+    
     // enable 32kHz sample-rate
-    ads129x_safe_write_register(ADS129X_REG_CONFIG1, ADS129X_SAMPLERATE_1024);
+    int16_t data_rate = ads129x_get_reg_DR_from_speed(32000);
+    uint8_t reg_val = 0; 
+    WRITE_BIT(reg_val, ADS129X_BIT_HR, 1);
+    WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate);
+    ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
 
     // enable internal reference
     uint8_t enable_internal_reference = (1 << ADS129X_BIT_PD_REFBUF) | (1 << 6);
@@ -680,5 +685,22 @@ void ads129x_main_thread(void)
 }
 
 K_THREAD_DEFINE(ads129x_th, STACKSIZE, ads129x_main_thread, NULL, NULL, NULL, PRIORITY, K_ESSENTIAL, 0);
+
+// ######
+// UTILS
+
+int16_t ads129x_get_reg_DR_from_speed(uint16_t expression) {
+    switch (expression)
+    {
+        case 32000: return 0b000;
+        case 16000: return 0b001;
+        case 8000: return 0b010;
+        case 4000: return 0b011;
+        case 2000: return 0b100;
+        case 1000: return 0b101;
+        case 500: return 0b110;
+        default: return -1;
+    }
+}
 
 #endif
