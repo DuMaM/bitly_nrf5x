@@ -49,6 +49,42 @@ static int ecg_data_dump(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "Data dump is: %s", data_dump > 0 ? "enabled" : "disabled");
     ads129x_print(data_dump > 0);
+
+    return 0;
+}
+
+/* sets new speed value */
+static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc == 1)
+    {
+        shell_help(shell);
+        return SHELL_CMD_HELP_PRINTED;
+    }
+
+    if (argc > 2)
+    {
+        shell_error(shell, "%s: bad parameters count", argv[0]);
+        return -EINVAL;
+    }
+
+    int16_t data_rate = atol(argv[1]);
+    data_rate = ads129x_get_reg_DR_from_speed(data_rate);
+    if (data_rate < 0)
+    {
+        shell_error(shell, "Invalid parameter value please check help");
+        ads129x_print(data_rate > 0);
+        return -EINVAL;
+    }
+
+    shell_print(shell, "Data rate is: %s", data_rate);
+    uint8_t reg_val = 0; 
+    ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
+    WRITE_BIT(reg_val, ADS129X_BIT_HR, ADS129x_CONFIG1_HR_HIGH);
+    WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate);
+
+    ads129x_write_data(ADS129X_REG_CONFIG1, 1, reg_val);
+
     return 0;
 }
 
@@ -56,6 +92,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_role,
                                SHELL_CMD(enable, NULL, "Enables continuos data transfer", ecg_data_enable),
                                SHELL_CMD(disable, NULL, "Disables continuos data transfer", ecg_data_disable),
                                SHELL_CMD(print, NULL, "Should data be printed (yes/no)", ecg_data_dump),
+                               SHELL_CMD(data_rate, NULL, "Data rates (32000, 16000, 8000, 4000, 2000, 1000, 500)", ecg_rate_settings),
                                SHELL_SUBCMD_SET_END);
 
 SHELL_CMD_REGISTER(ecg, &sub_role, "Drives ECG behaviour", default_cmd);

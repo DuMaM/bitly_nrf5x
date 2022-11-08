@@ -297,5 +297,6 @@ void ads129x_write_data_single(void);
 int ads129x_get_device_id(uint8_t *dev_id);
 void ads129x_setup();
 void ads129x_print(bool _print);
+int16_t ads129x_get_reg_DR_from_speed(uint16_t speed);
 
 #endif
