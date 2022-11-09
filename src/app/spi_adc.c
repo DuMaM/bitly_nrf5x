@@ -472,7 +472,7 @@ void ads129x_init(void)
 {
     // SPI Setup
     int ret;
-    LOG_INF("ADS129X spi init\n");
+    LOG_INF("ADS129X spi init");
     if (!device_is_ready(ads129x_spi))
     {
         LOG_ERR("SPI device %s is not ready\n", ads129x_spi->name);
@@ -554,7 +554,7 @@ void ads129x_setup(void)
 
     uint8_t dev_id = 0;
     ads129x_get_device_id(&dev_id);
-    LOG_INF("Device ID: %d\n", dev_id);
+    LOG_INF("Device ID: %d", dev_id);
 
     // setup channels
     ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);

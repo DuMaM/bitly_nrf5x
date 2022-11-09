@@ -70,16 +70,15 @@ static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv
         return -EINVAL;
     }
 
-    int16_t data_rate = strtol(argv[1], NULL, 10);
-    data_rate = ads129x_get_reg_DR_from_speed(data_rate);
+    uint16_t data_rate = strtol(argv[1], NULL, 10);
+    int16_t data_rate_code = ads129x_get_reg_DR_from_speed(data_rate);
     if (data_rate < 0)
     {
         shell_error(shell, "Invalid parameter value please check help");
-        ads129x_print(data_rate > 0);
         return -EINVAL;
     }
 
-    shell_print(shell, "Data rate is: %"PRIi16, data_rate);
+    shell_print(shell, "Setting data rate to: %"PRIu16, data_rate);
     uint8_t reg_val = 0; 
     ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
     WRITE_BIT(reg_val, ADS129X_BIT_HR, 1);
