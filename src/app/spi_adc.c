@@ -81,10 +81,10 @@ RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE);
 
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
-    .gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
+    .gpio.port = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
     .delay = ADS129X_SPI_CLOCK_DELAY,
-    .gpio_pin = 4,
-    .gpio_dt_flags = GPIO_ACTIVE_LOW};
+    .gpio.pin = 4,
+    .gpio.dt_flags = GPIO_ACTIVE_LOW};
 
 // arduino lib was working with SPI_MODE1
 // what means

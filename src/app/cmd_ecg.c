@@ -1,6 +1,8 @@
 #include <cmd.h>
 #include <spi_adc.h>
 #include <zephyr/logging/log.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
 LOG_MODULE_DECLARE(main);
@@ -68,7 +70,7 @@ static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv
         return -EINVAL;
     }
 
-    int16_t data_rate = atol(argv[1]);
+    int16_t data_rate = strtol(argv[1], NULL, 10);
     data_rate = ads129x_get_reg_DR_from_speed(data_rate);
     if (data_rate < 0)
     {
@@ -77,13 +79,12 @@ static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv
         return -EINVAL;
     }
 
-    shell_print(shell, "Data rate is: %s", data_rate);
+    shell_print(shell, "Data rate is: %"PRIi16, data_rate);
     uint8_t reg_val = 0; 
     ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
-    WRITE_BIT(reg_val, ADS129X_BIT_HR, ADS129x_CONFIG1_HR_HIGH);
+    WRITE_BIT(reg_val, ADS129X_BIT_HR, 1);
     WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate);
-
-    ads129x_write_data(ADS129X_REG_CONFIG1, 1, reg_val);
+    ads129x_write_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
 
     return 0;
 }

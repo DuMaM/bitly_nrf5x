@@ -8,13 +8,12 @@
 
 #include <performance_test.h>
 #include <app_utils.h>
-
 #include "sim_file.h"
 
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
 static uint8_t test_runs = 1;
-int64_t stamp;
+static int64_t stamp;
 
 LOG_MODULE_DECLARE(main);
 
@@ -37,6 +36,8 @@ static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
     return SIM_VALUE_BYTE_SIZE;
 }
 
+static uint32_t bytes_to_send = 1024;
+static uint16_t transfer_speed = 32000;
 static uint32_t send_test_sim_data()
 {
     uint32_t sim_prog = 0;
@@ -125,7 +126,6 @@ static void test_run(struct k_work *item)
     {
         prog += send_test_sim_data();
     }
-
     delta = k_uptime_delta(&stamp);
     LOG_INF("Done");
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
@@ -151,12 +151,13 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
     if (argc == 1)
     {
         shell_help(shell);
+        LOG_ERR("%s: This command require value in bytes, which tells how many bytes need to be send", argv[0]);
         return SHELL_CMD_HELP_PRINTED;
     }
 
     if (argc > 2)
     {
-        shell_error(shell, "%s: bad parameters count", argv[0]);
+        LOG_ERR("%s: bad parameters count", argv[0]);
         return -EINVAL;
     }
 

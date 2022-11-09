@@ -7,11 +7,35 @@
 #include <zephyr/logging/log.h>
 
 #include <performance_test.h>
+#include <app_utils.h>
 #include <spi_adc.h>
+
+extern uint8_t test_data_buffer[];
+extern uint16_t test_data_buffer_size;
+static uint8_t test_runs = 1;
+static int64_t stamp;
 
 LOG_MODULE_DECLARE(main);
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
+#define SIM_VALUE_BYTE_SIZE 3
+
+static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
+    #if SIM_VALUE_BYTE_SIZE >= 1
+                *(buffer + 0) = (uint8_t)(*(data));
+    #endif
+    #if SIM_VALUE_BYTE_SIZE >= 2
+                *(buffer + 1) = (uint8_t)(*(data) >> 8);
+    #endif
+    #if SIM_VALUE_BYTE_SIZE >= 3
+                *(buffer + 2) = (uint8_t)(*(data) >> 16);
+    #endif
+    #if SIM_VALUE_BYTE_SIZE >= 4
+                *(buffer + 3) = (uint8_t)((*data) >> 24);
+    #endif
+
+    return SIM_VALUE_BYTE_SIZE;
+}
 
 static uint32_t bytes_to_send = 1024;
 
@@ -53,7 +77,6 @@ static void test_run(struct k_work *item)
     const struct bt_conn_le_phy_param *phy = test_params.phy;
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
 
-    int64_t stamp;
     int64_t delta;
     uint32_t prog = 0;
 
