@@ -633,6 +633,7 @@ void ads129x_finish_data(uint8_t *load_data, uint32_t size)
 void ads129x_main_thread(void)
 {
     ads129x_setup();
+    uint8_t* buffer_tracker = NULL;
     struct spi_buf ads129x_rx_bufs[] = {{.buf = NULL, .len = ADS129X_SPI_PACKAGE_SIZE}};
     struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
     uint16_t size = 0;
@@ -652,7 +653,8 @@ void ads129x_main_thread(void)
             k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100));
 
             /* Allocate buffer within a ring buffer memory. */
-            size = ring_buf_put_claim(&ads129x_ring_buffer, (uint8_t **)&ads129x_rx_bufs[0].buf, ADS129x_DATA_BUFFER_SIZE);
+            size = ring_buf_put_claim(&ads129x_ring_buffer, &buffer_tracker, ADS129x_DATA_BUFFER_SIZE);
+            ads129x_rx_bufs[0].buf = buffer_tracker;
 
             /* do processing */
             /* NOTE: Work directly on a ring buffer memory */
@@ -660,14 +662,14 @@ void ads129x_main_thread(void)
             if (!ret)
             {
                 /* add missing leads */
-                lead1 = ads129x_get_leadI((uint8_t *)ads129x_rx_bufs[0].buf);
-                lead2 = ads129x_get_leadII((uint8_t *)ads129x_rx_bufs[0].buf);
-                conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_LEAD3_OFFSET);
-                conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_AVR_OFFSET);
-                conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_AVL_OFFSET);
-                conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), (uint8_t *)ads129x_rx_bufs[0].buf, ADS129x_AVF_OFFSET);
+                lead1 = ads129x_get_leadI(buffer_tracker);
+                lead2 = ads129x_get_leadII(buffer_tracker);
+                conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), buffer_tracker, ADS129x_LEAD3_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), buffer_tracker, ADS129x_AVR_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), buffer_tracker, ADS129x_AVL_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), buffer_tracker, ADS129x_AVF_OFFSET);
 
-                ads129x_dump_data(ads129x_rx_bufs[0].buf);
+                ads129x_dump_data(buffer_tracker);
             }
 
             /* Indicate amount of valid data. rx_size can be equal or less than size. */
