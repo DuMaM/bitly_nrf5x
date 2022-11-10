@@ -12,7 +12,6 @@
 
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
-static uint8_t test_runs = 1;
 static int64_t stamp;
 
 LOG_MODULE_DECLARE(main);
@@ -71,7 +70,7 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
     return prog;
 }
 
-static void test_run(struct k_work *item)
+static void adc_test_run(struct k_work *item)
 {
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     const struct bt_conn_le_phy_param *phy = test_params.phy;
@@ -118,25 +117,27 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     if (argc == 1)
     {
         shell_help(shell);
-        LOG_ERR("%s: This command require value in bytes, which tells how many bytes need to be send", argv[0]);
+        shell_error(shell, "%s: This command require value in bytes, which tells how many bytes need to be send", argv[0]);
         return SHELL_CMD_HELP_PRINTED;
     }
 
     if (argc > 2)
     {
-        LOG_ERR("%s: bad parameters count", argv[0]);
+        shell_error(shell, "%s: bad parameters count", argv[0]);
         return -EINVAL;
     }
 
     bytes_to_send = strtoul(argv[1], NULL, 10);
     if (ADS129x_DATA_BUFFER_SIZE > bytes_to_send)
     {
-        LOG_ERR("Invalid parameter %" PRIu8 ", it should be bigger then max data send from spi device", bytes_to_send);
+        shell_error(shell, "Invalid parameter %" PRIu8 ", it should be bigger then max data send from spi device", bytes_to_send);
         return -EINVAL;
     }
 
+    LOG_DBG("Data read speed: %"PRIu32, bytes_to_send);
+
     /* initialize work item for test */
-    k_work_init(&test_run_adc, test_run);
+    k_work_init(&test_run_adc, adc_test_run);
     k_work_submit_to_queue(&main_work_q, &test_run_adc);
     return 0;
 }

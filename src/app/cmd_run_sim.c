@@ -36,8 +36,6 @@ static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
     return SIM_VALUE_BYTE_SIZE;
 }
 
-static uint32_t bytes_to_send = 1024;
-static uint16_t transfer_speed = 32000;
 static uint32_t send_test_sim_data()
 {
     uint32_t sim_prog = 0;
@@ -151,13 +149,13 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
     if (argc == 1)
     {
         shell_help(shell);
-        LOG_ERR("%s: This command require value in bytes, which tells how many bytes need to be send", argv[0]);
+        shell_error(shell, "%s: This command require value in bytes, which tells how many bytes need to be send", argv[0]);
         return SHELL_CMD_HELP_PRINTED;
     }
 
     if (argc > 2)
     {
-        LOG_ERR("%s: bad parameters count", argv[0]);
+        shell_error(shell, "%s: bad parameters count", argv[0]);
         return -EINVAL;
     }
 

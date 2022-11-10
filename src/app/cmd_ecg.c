@@ -82,7 +82,7 @@ static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv
     uint8_t reg_val = 0; 
     ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
     WRITE_BIT(reg_val, ADS129X_BIT_HR, 1);
-    WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate);
+    WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate_code);
     ads129x_write_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
 
     return 0;
