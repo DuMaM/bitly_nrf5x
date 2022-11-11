@@ -41,12 +41,17 @@ static uint32_t bytes_to_send = 1024;
 static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
 {
     uint32_t prog = 0;
-    uint8_t *analog_data_ptr = NULL;
-    uint16_t analog_data_size = (test_params.data_len->tx_max_len / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE ;
+    uint8_t *analog_data_ptr = test_data_buffer;
+    uint16_t analog_data_size = 0;
     int err = 0;
 
     while (prog < _bytes_to_send)
     {
+        analog_data_size = _bytes_to_send - prog;
+        if (test_params.data_len->tx_max_len <= analog_data_size) {
+            analog_data_size = test_params.data_len->tx_max_len;
+        }
+
         /**
          * TODO: add scaling from shell
          * It would be good to send optimal number of data

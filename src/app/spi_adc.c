@@ -73,8 +73,9 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 
 // stores n numbers of spi data packet
 // ring buffer size should be bigger then 251 data len
-#define ADS129X_RING_BUFFER_PACKET ((uint8_t)(251 / ADS129x_DATA_BUFFER_SIZE) + ADS129X_SPI_PACKAGE_NUM)
-#define ADS129X_RING_BUFFER_SIZE (ADS129X_RING_BUFFER_PACKET * 3)
+// here is set to be 3 times bigger
+#define ADS129X_RING_BUFFER_PACKET ((uint8_t)(251 / ADS129x_DATA_BUFFER_SIZE))
+#define ADS129X_RING_BUFFER_SIZE (ADS129X_RING_BUFFER_PACKET * ADS129x_DATA_BUFFER_SIZE * 3)
 K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, ADS129X_RING_BUFFER_PACKET);
 K_MUTEX_DEFINE(ads129x_ring_buffer_mutex);
 RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE);
