@@ -71,6 +71,11 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 // spi but macros and objects
 #define SPI_NODE DT_NODELABEL(nrf53_spi)
 
+
+// ###########
+// # BUFFER
+// ###########
+
 // stores n numbers of spi data packet
 // ring buffer size should be bigger then 251 data len
 // here is set to be 3 times bigger
@@ -85,9 +90,86 @@ K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
 // handle data stream
 // K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE, 4);
 
+static bool ads129x_wait_for_data(uint32_t size) {
+    /**
+     * wait for data be ready to read, there is no need
+     * to keep asking for result when there is nothing in buffer
+     */
+    if (k_sem_take(&ads129x_ring_buffer_rdy, K_MSEC(100)) != 0) {
+        return true;
+    }
 
-// drive adc config
-bool ecg_status = false;
+    /**
+     * ensure that sufficient data is present
+     */
+    if (ring_buf_size_get(&ads129x_ring_buffer) < size) {
+        return true;
+    }
+
+    return false;
+}
+
+uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size)
+{
+
+    /**
+     * ensure that sufficient data is present
+     */
+    if (ads129x_wait_for_data(size)) {
+        return 0;
+    }
+
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
+        return 0;
+    }
+
+    size = ring_buf_get_claim(&ads129x_ring_buffer, load_data, size);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    return size;
+}
+
+uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
+{
+    /**
+     * ensure that sufficient data is present
+     */
+    if (ads129x_wait_for_data(size)) {
+        return 0;
+    }
+
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
+        return 0;
+    }
+
+    size = ring_buf_get(&ads129x_ring_buffer, load_data, size);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    return size;
+}
+
+int8_t ads129x_reset_data(void)
+{
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(1000)) != 0)
+    {
+        LOG_ERR("ADS129x: Buffer reset was unsuccessful");
+        return -1;
+    }
+
+    ring_buf_reset(&ads129x_ring_buffer);
+    k_sem_reset(&ads129x_ring_buffer_rdy);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    return 0;
+}
+
+void ads129x_finish_data(uint8_t *load_data, uint32_t size)
+{
+    /* Indicate amount of valid data. rx_size can be equal or less than size. */
+    ring_buf_get_finish(&ads129x_ring_buffer, size);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+}
+
+// ##########
+// # DRIVER
+// ##########
 
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
@@ -550,10 +632,10 @@ void ads129x_setup(void)
 
     // device wakes up in RDATAC mode, so send stop signal
     ads129x_sdatac();
-    
+
     // enable 32kHz sample-rate
     int16_t data_rate = ads129x_get_reg_DR_from_speed(32000);
-    uint8_t reg_val = 0; 
+    uint8_t reg_val = 0;
     WRITE_BIT(reg_val, ADS129X_BIT_HR, 1);
     WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate);
     ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
@@ -577,90 +659,12 @@ void ads129x_setup(void)
     gpio_pin_set_dt(&start_spec, 0);
 }
 
-// ###########
-// # BUFFER
-// ###########
-
-static bool ads129x_wait_for_data(uint32_t size) {
-    /**
-     * wait for data be ready to read, there is no need
-     * to keep asking for result when there is nothing in buffer
-     */
-    if (k_sem_take(&ads129x_ring_buffer_rdy, K_MSEC(100)) != 0) {
-        return true;
-    }
-
-    /**
-     * ensure that sufficient data is present
-     */
-    if (ring_buf_size_get(&ads129x_ring_buffer) < size) {
-        return true;
-    }
-
-    return false;
-}
-
-uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size)
-{
-
-    /**
-     * ensure that sufficient data is present
-     */    
-    if (ads129x_wait_for_data(size)) {
-        return 0;
-    }
-
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
-        return 0;
-    }
-
-    size = ring_buf_get_claim(&ads129x_ring_buffer, load_data, size);
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
-    return size;
-}
-
-uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
-{
-    /**
-     * ensure that sufficient data is present
-     */    
-    if (ads129x_wait_for_data(size)) {
-        return 0;
-    }
-
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
-        return 0;
-    }
-
-    size = ring_buf_get(&ads129x_ring_buffer, load_data, size);
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
-    return size;
-}
-
-int8_t ads129x_reset_data(void)
-{
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(1000)) != 0)
-    {
-        LOG_ERR("ADS129x: Buffer reset was unsuccessful");
-        return -1;
-    }
-
-    ring_buf_reset(&ads129x_ring_buffer);
-    k_sem_reset(&ads129x_ring_buffer_rdy);
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
-    return 0;
-}
-
-void ads129x_finish_data(uint8_t *load_data, uint32_t size)
-{
-    /* Indicate amount of valid data. rx_size can be equal or less than size. */
-    ring_buf_get_finish(&ads129x_ring_buffer, size);
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
-}
-
 // #########
 // # UTILS
 // #########
+
+// drive adc config
+bool ecg_status = false;
 
 int16_t ads129x_get_reg_DR_from_speed(uint16_t expression) {
     switch (expression)
