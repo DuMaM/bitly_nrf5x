@@ -77,32 +77,20 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
 
 static void adc_test_run(struct k_work *item)
 {
-    const struct bt_le_conn_param *conn_param = test_params.conn_param;
-    const struct bt_conn_le_phy_param *phy = test_params.phy;
-    const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
-
     int64_t delta;
     uint32_t prog = 0;
 
-    int err;
-    err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_ANALOG);
-    if (err)
-    {
-        LOG_ERR("GATT read failed (err %d)", err);
-        return;
-    }
-
     /* get cycle stamp */
-    LOG_INF("=== Start analog data transfer ===");
+    LOG_INF("=== Reseting data buffer ===");
     ads129x_reset_data();
+    LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
     prog = send_test_sim_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
-    LOG_INF("Done");
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
 
     /* read back char from peer */
-    err = bt_performance_test_read(&performance_test);
+    int err = bt_performance_test_read(&performance_test);
     if (err)
     {
         LOG_ERR("GATT read failed (err %d)", err);
@@ -140,6 +128,17 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     }
 
     LOG_DBG("Data read speed: %"PRIu32, bytes_to_send);
+
+    const struct bt_le_conn_param *conn_param = test_params.conn_param;
+    const struct bt_conn_le_phy_param *phy = test_params.phy;
+    const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
+
+    int err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_ANALOG);
+    if (err)
+    {
+        LOG_ERR("GATT read failed (err %d)", err);
+        return;
+    }
 
     /* initialize work item for test */
     k_work_init(&test_run_adc, adc_test_run);
