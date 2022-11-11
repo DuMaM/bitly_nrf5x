@@ -86,6 +86,9 @@ K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
 // K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE, 4);
 
 
+// drive adc config
+bool ecg_status = false;
+
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
     .gpio.port = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
@@ -649,6 +652,28 @@ void ads129x_finish_data(uint8_t *load_data, uint32_t size)
     /* Indicate amount of valid data. rx_size can be equal or less than size. */
     ring_buf_get_finish(&ads129x_ring_buffer, size);
     k_mutex_unlock(&ads129x_ring_buffer_mutex);
+}
+
+void ads129x_data_enable()
+{
+    ads129x_start();
+    k_msleep(1);
+    ads129x_rdatac();
+    LOG_INF("data transfer enabled");
+    ecg_status = true;
+}
+
+void ads129x_data_disable()
+{
+    ads129x_sdatac();
+    k_msleep(1);
+    ads129x_stop();
+    LOG_INF("data transfer disabled");
+    ecg_status = false;
+}
+
+bool ads129x_get_status() {
+    return ecg_status;
 }
 
 void ads129x_main_thread(void)

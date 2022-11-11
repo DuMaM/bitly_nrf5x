@@ -10,21 +10,13 @@ LOG_MODULE_DECLARE(main);
 // add connect command
 static int ecg_data_enable(const struct shell *shell, size_t argc, char **argv)
 {
-    ads129x_start();
-    k_msleep(1);
-    ads129x_rdatac();
-    LOG_INF("EGC: Data enabled");
-
+    ads129x_data_enable();
     return 0;
 }
 
 static int ecg_data_disable(const struct shell *shell, size_t argc, char **argv)
 {
-    ads129x_sdatac();
-    k_msleep(1);
-    ads129x_stop();
-    LOG_INF("EGC: Data disabled");
-
+    ads129x_data_disable();
     return 0;
 }
 

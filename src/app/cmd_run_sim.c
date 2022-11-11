@@ -117,6 +117,10 @@ static void test_run(struct k_work *item)
         return;
     }
 
+    if (!ads129x_get_status()) {
+        LOG_ERR("Adc data is not enabled");
+    }
+
     /* get cycle stamp */
     LOG_INF("=== Start sim data transfer ===");
     stamp = k_uptime_get_32();
