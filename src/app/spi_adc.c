@@ -19,7 +19,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/types.h>
 #include <zephyr/kernel.h>
-
+#include <zephyr/sys_clock.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
@@ -76,9 +76,15 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 // here is set to be 3 times bigger
 #define ADS129X_RING_BUFFER_PACKET ((uint8_t)(251 / ADS129x_DATA_BUFFER_SIZE))
 #define ADS129X_RING_BUFFER_SIZE (ADS129X_RING_BUFFER_PACKET * ADS129x_DATA_BUFFER_SIZE * 3)
-K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, ADS129X_RING_BUFFER_PACKET);
+
+// handle simple data requests
 K_MUTEX_DEFINE(ads129x_ring_buffer_mutex);
 RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE);
+K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
+
+// handle data stream
+// K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE, 4);
+
 
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
 const struct spi_cs_control ads129x_cs_ctrl = {
@@ -568,40 +574,54 @@ void ads129x_setup(void)
     gpio_pin_set_dt(&start_spec, 0);
 }
 
-uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size)
-{
+static bool ads129x_wait_for_data(uint32_t size) {
     /**
      * wait for data be ready to read, there is no need
      * to keep asking for result when there is nothing in buffer
      */
-    k_sem_take(&ads129x_ring_buffer_rdy, K_FOREVER);
+    if (k_sem_take(&ads129x_ring_buffer_rdy, K_MSEC(100)) != 0) {
+        return true;
+    }
 
     /**
      * ensure that sufficient data is present
      */
-    if (ring_buf_size_get(&ads129x_ring_buffer) < size ||
-        k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0)
-    {
+    if (ring_buf_size_get(&ads129x_ring_buffer) < size) {
+        return true;
+    }
+
+    return false;
+}
+
+uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size)
+{
+
+    /**
+     * ensure that sufficient data is present
+     */    
+    if (ads129x_wait_for_data(size)) {
         return 0;
     }
 
-    return ring_buf_get_claim(&ads129x_ring_buffer, load_data, size);
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
+        return 0;
+    }
+
+    size = ring_buf_get_claim(&ads129x_ring_buffer, load_data, size);
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    return size;
 }
 
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
 {
     /**
-     * wait for data be ready to read, there is no need
-     * to keep asking for result when there is nothing in buffer
-     */
-    k_sem_take(&ads129x_ring_buffer_rdy, K_FOREVER);
-
-    /**
      * ensure that sufficient data is present
-     */
-    if (ring_buf_size_get(&ads129x_ring_buffer) < size ||
-        k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0)
-    {
+     */    
+    if (ads129x_wait_for_data(size)) {
+        return 0;
+    }
+
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
         return 0;
     }
 
@@ -612,7 +632,7 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
 
 int8_t ads129x_reset_data(void)
 {
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0)
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(1000)) != 0)
     {
         LOG_ERR("ADS129x: Buffer reset was unsuccessful");
         return -1;
