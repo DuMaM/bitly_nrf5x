@@ -577,6 +577,10 @@ void ads129x_setup(void)
     gpio_pin_set_dt(&start_spec, 0);
 }
 
+// ###########
+// # BUFFER
+// ###########
+
 static bool ads129x_wait_for_data(uint32_t size) {
     /**
      * wait for data be ready to read, there is no need
@@ -654,6 +658,24 @@ void ads129x_finish_data(uint8_t *load_data, uint32_t size)
     k_mutex_unlock(&ads129x_ring_buffer_mutex);
 }
 
+// #########
+// # UTILS
+// #########
+
+int16_t ads129x_get_reg_DR_from_speed(uint16_t expression) {
+    switch (expression)
+    {
+        case 32000: return 0b000;
+        case 16000: return 0b001;
+        case 8000: return 0b010;
+        case 4000: return 0b011;
+        case 2000: return 0b100;
+        case 1000: return 0b101;
+        case 500: return 0b110;
+        default: return -1;
+    }
+}
+
 void ads129x_data_enable()
 {
     ads129x_start();
@@ -675,6 +697,10 @@ void ads129x_data_disable()
 bool ads129x_get_status() {
     return ecg_status;
 }
+
+// ###########
+// # THREAD
+// ###########
 
 void ads129x_main_thread(void)
 {
@@ -733,22 +759,5 @@ void ads129x_main_thread(void)
 }
 
 K_THREAD_DEFINE(ads129x_th, STACKSIZE, ads129x_main_thread, NULL, NULL, NULL, PRIORITY, K_ESSENTIAL, 0);
-
-// ######
-// UTILS
-
-int16_t ads129x_get_reg_DR_from_speed(uint16_t expression) {
-    switch (expression)
-    {
-        case 32000: return 0b000;
-        case 16000: return 0b001;
-        case 8000: return 0b010;
-        case 4000: return 0b011;
-        case 2000: return 0b100;
-        case 1000: return 0b101;
-        case 500: return 0b110;
-        default: return -1;
-    }
-}
 
 #endif
