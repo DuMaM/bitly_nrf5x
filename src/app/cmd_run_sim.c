@@ -39,19 +39,21 @@ static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
 static uint32_t send_test_sim_data()
 {
     uint32_t sim_prog = 0;
-    bool sim_skip_timestamp = false; // becasue there are times when timestamp is added as a last one
-                                    // loop finishes cycle and then it's added again
-                                    // this ruins a code structure so we want protect it whitout big changes
+    bool sim_skip_timestamp = false; // because there are times when timestamp is added as a last one
+                                     // loop finishes cycle and then it's added again
+                                     // this ruins a code structure so we want protect it without big changes
     uint16_t buffer_size = 0;
     uint32_t sim_written = 0;
     int err = 0;
 
-    // treat data as one block of memory thanks to [] operator
+    /*
+     * treat data as one block of memory thanks to [] operator
+     */
     uint32_t *sim_ptr = ((uint32_t *)sim_data);
 
     while (sim_prog < SIM_SIZE)
     {
-        /* 
+        /*
          * if we are in middle of a buffer
          * set max buffer value as input
          * and update index of sim data
@@ -63,8 +65,7 @@ static uint32_t send_test_sim_data()
         }
 
         /* otherwise use only remaining sim data values */
-        else
-        {
+        else {
             buffer_size = (SIM_SIZE - sim_prog) * 3;
         }
 

@@ -730,6 +730,11 @@ void ads129x_main_thread(void)
 
             /* Allocate buffer within a ring buffer memory. */
             size = ring_buf_put_claim(&ads129x_ring_buffer, &buffer_tracker, ADS129x_DATA_BUFFER_SIZE);
+
+            /* add timestamp and move buffer */
+            buffer_tracker = conv_u24_to_raw(k_uptime_get_32(), buffer_tracker, 0);
+
+            /* tell where load data */
             ads129x_rx_bufs[0].buf = buffer_tracker;
 
             /* do processing */
