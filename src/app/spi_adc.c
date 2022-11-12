@@ -780,11 +780,6 @@ void ads129x_main_thread(void)
             /* send data to the consumers */
             k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_USEC(100));
         }
-        else
-        {
-            /* put CPU to sleep to save power */
-            k_usleep(100);
-        }
     }
 }
 
