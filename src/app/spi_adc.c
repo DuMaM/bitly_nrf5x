@@ -676,7 +676,7 @@ void ads129x_data_enable()
     ads129x_start();
     k_msleep(1);
     ads129x_rdatac();
-    LOG_INF("data transfer enabled");
+    LOG_INF("Data transfer enabled");
     ecg_status = true;
 
     ads129x_reset_data();
@@ -687,12 +687,37 @@ void ads129x_data_disable()
     ads129x_sdatac();
     k_msleep(1);
     ads129x_stop();
-    LOG_INF("data transfer disabled");
+    LOG_INF("Data transfer disabled");
     ecg_status = false;
 }
 
 bool ads129x_get_status() {
     return ecg_status;
+}
+
+int16_t ads129x_set_data_rate(uint16_t data_rate) {
+    int16_t data_rate_code = ads129x_get_reg_DR_from_speed(data_rate);
+
+    if (data_rate_code < 0)
+    {
+        LOG_ERR("Unknown speed parameter value, please check help");
+        return -EINVAL;
+    }
+
+    LOG_INF("Setting data rate to: %"PRIu16, data_rate);
+    uint8_t reg_val = 0;
+    ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
+
+#define DR012_MASK 0b111
+
+    /* clear bits for DR reg */
+    reg_val &= ~(DR012_MASK);
+    reg_val |= data_rate_code;
+
+    reg_val |= 1 << ADS129X_BIT_HR;
+    ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
+
+    return 0;
 }
 
 // ###########
