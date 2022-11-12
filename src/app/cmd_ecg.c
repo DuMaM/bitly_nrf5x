@@ -63,8 +63,11 @@ static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv
     }
 
     uint16_t data_rate = strtol(argv[1], NULL, 10);
-    return ads129x_set_data_rate(data_rate);
-
+    ads129x_set_data_rate(data_rate);
+    if (ads129x_get_status()) {
+        ads129x_data_disable();
+        ads129x_data_enable();
+    }
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_role,

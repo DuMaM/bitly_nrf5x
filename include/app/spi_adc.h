@@ -325,5 +325,6 @@ int16_t ads129x_get_reg_DR_from_speed(uint16_t speed);
 void ads129x_data_enable();
 void ads129x_data_disable();
 bool ads129x_get_status();
+int16_t ads129x_set_data_rate(uint16_t data_rate);
 
 #endif
