@@ -17,24 +17,6 @@ static int64_t stamp;
 LOG_MODULE_DECLARE(main);
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
-#define SIM_VALUE_BYTE_SIZE 3
-
-static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
-    #if SIM_VALUE_BYTE_SIZE >= 1
-                *(buffer + 0) = (uint8_t)(*(data));
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 2
-                *(buffer + 1) = (uint8_t)(*(data) >> 8);
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 3
-                *(buffer + 2) = (uint8_t)(*(data) >> 16);
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 4
-                *(buffer + 3) = (uint8_t)((*data) >> 24);
-    #endif
-
-    return SIM_VALUE_BYTE_SIZE;
-}
 
 static uint32_t bytes_to_send = 1024;
 
