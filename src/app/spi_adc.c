@@ -71,6 +71,16 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 // spi but macros and objects
 #define SPI_NODE DT_NODELABEL(nrf53_spi)
 
+#define BYTE_TO_BINARY_PATTERN "0b%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
 
 // ###########
 // # BUFFER
@@ -459,8 +469,8 @@ int ads129x_safe_write_register(uint8_t _address, uint8_t _value)
 
     if (tmp != _value)
     {
-        LOG_ERR("WR: %02X (data=%" PRIu8 ")", _address & 0x1F, _value);
-        LOG_ERR("RR: %02X (data=%" PRIu8 ")", _address & 0x1F, tmp);
+        LOG_ERR("WR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(_value));
+        LOG_ERR("RR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(tmp));
         return -EIO;
     }
     else
