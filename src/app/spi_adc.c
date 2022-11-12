@@ -467,9 +467,9 @@ int ads129x_safe_write_register(uint8_t _address, uint8_t _value)
     ads129x_write_registers(_address, 1, &_value);
     ads129x_read_registers(_address, 1, &tmp);
 
+    LOG_INF("WR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(_value));
     if (tmp != _value)
     {
-        LOG_ERR("WR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(_value));
         LOG_ERR("RR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(tmp));
         return -EIO;
     }
