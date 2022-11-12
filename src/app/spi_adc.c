@@ -251,19 +251,7 @@ static int ads129x_access(const struct device *_spi,
          .len = _len}};
     struct spi_buf_set tx = {.buffers = tx_bufs};
 
-    if (cmd & ADS129X_CMD_RDATA)
-    {
-        tx.count = 1;
-        struct spi_buf rx_bufs[] = {
-            // skip response for cmd
-            {.buf = NULL, .len = sizeof(cmd)},
-            // get response after sending value number of regs
-            {.buf = _data,
-             .len = _len}};
-        struct spi_buf_set rx = {.buffers = rx_bufs, .count = sizeof(rx_bufs) / sizeof(rx_bufs[0])};
-        return spi_transceive(_spi, _spi_cfg, &tx, &rx);
-    }
-    else if (cmd & ADS129X_CMD_RREG)
+    if (cmd & ADS129X_CMD_RREG)
     {
         tx.count = 2;
         struct spi_buf rx_bufs[] = {
@@ -280,6 +268,18 @@ static int ads129x_access(const struct device *_spi,
     {
         tx.count = 3;
         return spi_write(ads129x_spi, &ads129x_spi_cfg, &tx);
+    }
+    else if (cmd == ADS129X_CMD_RDATA)
+    {
+        tx.count = 1;
+        struct spi_buf rx_bufs[] = {
+            // skip response for cmd
+            {.buf = NULL, .len = sizeof(cmd)},
+            // get response after sending value number of regs
+            {.buf = _data,
+             .len = _len}};
+        struct spi_buf_set rx = {.buffers = rx_bufs, .count = sizeof(rx_bufs) / sizeof(rx_bufs[0])};
+        return spi_transceive(_spi, _spi_cfg, &tx, &rx);
     }
     else
     {
