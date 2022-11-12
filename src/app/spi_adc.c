@@ -88,75 +88,56 @@ RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE);
 K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
 
 // handle data stream
-// K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE, 4);
-
-static bool ads129x_wait_for_data(uint32_t size) {
-    /**
-     * wait for data be ready to read, there is no need
-     * to keep asking for result when there is nothing in buffer
-     */
-    if (k_sem_take(&ads129x_ring_buffer_rdy, K_MSEC(100)) != 0) {
-        return true;
-    }
-
-    /**
-     * ensure that sufficient data is present
-     */
-    if (ring_buf_size_get(&ads129x_ring_buffer) < size) {
-        return true;
-    }
-
-    return false;
-}
-
-uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size)
-{
-
-    /**
-     * ensure that sufficient data is present
-     */
-    if (ads129x_wait_for_data(size)) {
-        return 0;
-    }
-
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
-        return 0;
-    }
-
-    size = ring_buf_get_claim(&ads129x_ring_buffer, load_data, size);
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
-    return size;
-}
+int64_t timestamp = 0;
+K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE, 4);
 
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
 {
-    /**
-     * ensure that sufficient data is present
-     */
-    if (ads129x_wait_for_data(size)) {
-        return 0;
+    int rc = 0;
+    uint32_t total = size;
+    size_t   bytes_read;
+    size_t   min_size = sizeof(pipe_packet_u);
+
+    while (1) {
+        /**
+         * sometimes we run this function to fetch last remaining
+         * chunk of data, this can be smaller that pipe package data
+         * so this will allow us to pull remaining one
+         *
+         * there is a second condition when we reduced
+         * our size because pipe was not able to give all data at once
+         */
+        if (size < min_size) {
+            min_size = size;
+        }
+
+        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_MSEC(100));
+
+        if (rc == -EINVAL) {
+            LOG_ERR("Bad input data: size=%d, min_size=%d, read=%d", size, min_size, bytes_read);
+            break;
+        } else if ((rc < 0) || (bytes_read < min_size)) {
+            LOG_WRN("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
+            continue;
+        } else if (bytes_read < size) {
+            LOG_WRN("Buffer is not fully filled - moving");
+            size -= bytes_read;
+            load_data += bytes_read;
+        } else {
+            /* All data was received */
+            break;
+        }
     }
 
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
-        return 0;
-    }
-
-    size = ring_buf_get(&ads129x_ring_buffer, load_data, size);
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
-    return size;
+    return total;
 }
 
 int8_t ads129x_reset_data(void)
 {
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(1000)) != 0)
-    {
-        LOG_ERR("ADS129x: Buffer reset was unsuccessful");
-        return -1;
-    }
+    timestamp = k_uptime_get();
 
-    ring_buf_reset(&ads129x_ring_buffer);
+    k_pipe_flush(&ads129x_pipe);
     k_sem_reset(&ads129x_ring_buffer_rdy);
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
     return 0;
 }
 
@@ -687,6 +668,8 @@ void ads129x_data_enable()
     ads129x_rdatac();
     LOG_INF("data transfer enabled");
     ecg_status = true;
+
+    ads129x_reset_data();
 }
 
 void ads129x_data_disable()
@@ -708,13 +691,26 @@ bool ads129x_get_status() {
 
 void ads129x_main_thread(void)
 {
-    ads129x_setup();
-    uint8_t* buffer_tracker = NULL;
-    struct spi_buf ads129x_rx_bufs[] = {{.buf = NULL, .len = ADS129X_SPI_PACKAGE_SIZE}};
+
+    pipe_packet_u tx_data;
+
+    /*
+     * in this spi buffer not whole data is stored
+     * it only uses to map spi data map
+     */
+    struct spi_buf ads129x_rx_bufs[] = {{.buf = tx_data.packet.leads._buffer, .len = ADS129X_SPI_PACKAGE_SIZE}};
     struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
-    uint16_t size = 0;
+
+    /* track statsu of buffers */
+    size_t total_size = ADS129x_DATA_BUFFER_SIZE;
+    size_t bytes_written = 0;
+
+    /* tmp vars*/
     uint32_t lead1 = 0;
     uint32_t lead2 = 0;
+
+    /* setup first */
+    ads129x_setup();
 
     for (;;)
     {
@@ -723,19 +719,11 @@ void ads129x_main_thread(void)
          * go to next loop iteration (the semaphore might have been given
          * again); else, make the CPU idle.
          */
-
-        if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0 && ring_buf_capacity_get(&ads129x_ring_buffer) >= ADS129x_DATA_BUFFER_SIZE)
+        if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0)
         {
-            k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100));
 
-            /* Allocate buffer within a ring buffer memory. */
-            size = ring_buf_put_claim(&ads129x_ring_buffer, &buffer_tracker, ADS129x_DATA_BUFFER_SIZE);
-
-            /* add timestamp and move buffer */
-            buffer_tracker = conv_u24_to_raw(k_uptime_get_32(), buffer_tracker, 0);
-
-            /* tell where load data */
-            ads129x_rx_bufs[0].buf = buffer_tracker;
+            /* add timestamp */
+            tx_data.packet.timestamp = k_uptime_get() - timestamp;
 
             /* do processing */
             /* NOTE: Work directly on a ring buffer memory */
@@ -743,21 +731,19 @@ void ads129x_main_thread(void)
             if (!ret)
             {
                 /* add missing leads */
-                lead1 = ads129x_get_leadI(buffer_tracker);
-                lead2 = ads129x_get_leadII(buffer_tracker);
-                conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), buffer_tracker, ADS129x_LEAD3_OFFSET);
-                conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), buffer_tracker, ADS129x_AVR_OFFSET);
-                conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), buffer_tracker, ADS129x_AVL_OFFSET);
-                conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), buffer_tracker, ADS129x_AVF_OFFSET);
+                lead1 = tx_data.packet.leads._leads.lead1;
+                lead2 = tx_data.packet.leads._leads.lead2;
+                conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_LEAD3_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVR_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVL_OFFSET);
+                conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVF_OFFSET);
 
-                ads129x_dump_data(buffer_tracker);
+                ads129x_dump_data(tx_data.packet.leads._buffer);
             }
 
-            /* Indicate amount of valid data. rx_size can be equal or less than size. */
-            ring_buf_put_finish(&ads129x_ring_buffer, size);
-
-            k_mutex_unlock(&ads129x_ring_buffer_mutex);
-            k_sem_give(&ads129x_ring_buffer_rdy);
+            /* send data to consumers */
+            /* send data to the consumers */
+            k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_USEC(100));
         }
         else
         {
