@@ -256,7 +256,7 @@ typedef struct  __attribute__((__packed__)) _packet_12lead_struct
 
 typedef union _packet_12lead_u {
     packet_12lead_t _leads;
-    uint8_t _buffer[0];
+    uint8_t _buffer[sizeof(packet_12lead_t)];
 } packet_12lead_u;
 
 typedef struct  __attribute__((__packed__)) _pipe_packet {
@@ -266,7 +266,7 @@ typedef struct  __attribute__((__packed__)) _pipe_packet {
 
 typedef union _pipe_packet_u {
     pipe_packet_t packet;
-    uint8_t buffer[0];
+    uint8_t buffer[sizeof(pipe_packet_t)];
 } pipe_packet_u;
 
 
