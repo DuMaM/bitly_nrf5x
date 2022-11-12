@@ -27,7 +27,7 @@ void main(void)
     /* init pheriferials */
     app_usb_init();
     bt_init();
-    
+
 	uint32_t dev_id[2] = {0, 0};
     hwinfo_get_device_id((void*)dev_id, sizeof(dev_id));
     LOG_INF("Core ID: --%"PRIu32" %"PRIu32"--", dev_id[0], dev_id[1]);

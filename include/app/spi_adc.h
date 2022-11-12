@@ -227,11 +227,15 @@
 #define ADS129X_SPI_PACKAGE_SIZE (ADS129X_SPI_PACKAGE_NUM * 3)
 
 #define ADS129X_AUGMENTED_LEAD_NUM 4
+
+#define ADS129X_ECG_NUM (ADS129X_AUGMENTED_LEAD_NUM + ADS129X_SPI_DATA_PACKAGES_NUM)
+#define ADS129X_ECG_SIZE (ADS129X_ECG_NUM * 3)
+
 #define ADS129x_TIMESTAMP_NUM 1
 #define ADS129X_DATA_NUM (ADS129X_SPI_DATA_PACKAGES_NUM + ADS129X_SPI_STATUS_WORD_NUM + ADS129X_AUGMENTED_LEAD_NUM + ADS129x_TIMESTAMP_NUM)
 #define ADS129x_DATA_BUFFER_SIZE (ADS129X_DATA_NUM * 3)
 
-typedef struct _packet_12lead
+typedef struct  __attribute__((__packed__)) _packet_12lead_struct
 {
     uint32_t status : 24;
     uint32_t v6_c6 : 24;
@@ -247,7 +251,24 @@ typedef struct _packet_12lead
     uint32_t aVR : 24;
     uint32_t aVL : 24;
     uint32_t aVF : 24;
+
 } packet_12lead_t;
+
+typedef union _packet_12lead_u {
+    packet_12lead_t _leads;
+    uint8_t _buffer[0];
+} packet_12lead_u;
+
+typedef struct  __attribute__((__packed__)) _pipe_packet {
+    uint32_t timestamp: 24;
+    packet_12lead_u leads;
+} pipe_packet_t;
+
+typedef union _pipe_packet_u {
+    pipe_packet_t packet;
+    uint8_t buffer[0];
+} pipe_packet_u;
+
 
 #define ADS129x_STATUS_OFFSET (1 * 3)
 #define ADS129x_V6_OFFSET (1 * 3)
@@ -304,5 +325,6 @@ int16_t ads129x_get_reg_DR_from_speed(uint16_t speed);
 void ads129x_data_enable();
 void ads129x_data_disable();
 bool ads129x_get_status();
+int16_t ads129x_set_data_rate(uint16_t data_rate);
 
 #endif

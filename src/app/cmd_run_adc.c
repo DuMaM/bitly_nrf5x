@@ -42,7 +42,7 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
 {
     uint32_t prog = 0;
     uint8_t *analog_data_ptr = test_data_buffer;
-    uint16_t analog_data_size = 0;
+    uint32_t analog_data_size = 0;
     int err = 0;
 
     /*
@@ -74,7 +74,6 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
             continue;
         }
 
-        LOG_INF("Sending %"PRIu32" from adc", analog_data_size);
         err = bt_performance_test_write(&performance_test, analog_data_ptr, analog_data_size);
         if (err)
         {
@@ -91,6 +90,11 @@ static void adc_test_run(struct k_work *item)
 {
     int64_t delta;
     uint32_t prog = 0;
+
+
+    if (!ads129x_get_status()) {
+        LOG_ERR("Adc data is not enabled");
+    }
 
     /* get cycle stamp */
     LOG_INF("=== Reseting data buffer ===");
