@@ -34,8 +34,8 @@ inline uint32_t conv_i32_to_u24(int32_t i32_val)
 
 inline uint8_t *conv_u24_to_raw(uint32_t u24_val, uint8_t *raw, uint16_t pos)
 {
-    raw[pos + 0] = 0xFF && (u24_val >> 16);
-    raw[pos + 1] = 0xFF && (u24_val >> 8);
-    raw[pos + 2] = 0xFF && (u24_val >> 0);
+    raw[pos + 0] = (uint8_t)(0xFF & (u24_val >> 16));
+    raw[pos + 1] = (uint8_t)(0xFF & (u24_val >> 8));
+    raw[pos + 2] = (uint8_t)(0xFF & (u24_val >> 0));
     return raw + pos + 3;
 }
