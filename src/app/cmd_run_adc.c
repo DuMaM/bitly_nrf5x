@@ -91,6 +91,11 @@ static void adc_test_run(struct k_work *item)
     int64_t delta;
     uint32_t prog = 0;
 
+
+    if (!ads129x_get_status()) {
+        LOG_ERR("Adc data is not enabled");
+    }
+
     /* get cycle stamp */
     LOG_INF("=== Reseting data buffer ===");
     ads129x_reset_data();
