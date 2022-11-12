@@ -483,9 +483,11 @@ int ads129x_safe_write_register(uint8_t _address, uint8_t _value)
  * Read device ID.
  * @return device ID
  */
-int ads129x_get_device_id(uint8_t *dev_id)
+uint8_t ads129x_get_device_id()
 {
-    return ads129x_read_registers(ADS129X_REG_ID, 1, dev_id);
+    uint8_t dev_id = 0;
+    ads129x_read_registers(ADS129X_REG_ID, 1, &dev_id);
+    return dev_id;
 }
 
 /* add gpio callbacks */
@@ -521,7 +523,7 @@ void ads129x_drdy_callback_deinit()
 void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uint8_t _mux)
 {
     uint8_t value = ((_powerDown & 1) << 7) | ((_gain & 7) << 4) | (_mux & 7);
-    ads129x_write_registers(ADS129X_REG_CH1SET + (_channel - 1), 1, &value);
+    ads129x_safe_write_register(ADS129X_REG_CH1SET + (_channel - 1), value);
 }
 
 void ads129x_print(bool _print)
@@ -648,6 +650,9 @@ void ads129x_setup(void)
     }
 
     gpio_pin_set_dt(&start_spec, 0);
+
+    LOG_INF("Device ID: %d", ads129x_get_device_id());
+    ads129x_dump_regs();
 }
 
 // #########
@@ -718,6 +723,40 @@ int16_t ads129x_set_data_rate(uint16_t data_rate) {
     ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
 
     return 0;
+}
+
+void ads129x_dump_regs()
+{
+    uint8_t reg_val = 0;
+
+    struct _dump_regs
+    {
+        char *name;
+        uint8_t address;
+    };
+
+    struct _dump_regs regs[4] = {
+        {
+            .name = "Config1",
+            .address = ADS129X_REG_CONFIG1,
+        },
+        {
+            .name = "Config2",
+            .address = ADS129X_REG_CONFIG2,
+        },
+        {
+            .name = "Config3",
+            .address = ADS129X_REG_CONFIG3,
+        },
+        {
+            .name = "Config4",
+            .address = ADS129X_REG_CONFIG4,
+        }};
+    for (int i = 0; i < 4; i++)
+    {
+        ads129x_read_registers(regs[i].address, 1, &reg_val);
+        LOG_INF("%s: " BYTE_TO_BINARY_PATTERN, regs[i].name, BYTE_TO_BINARY(reg_val));
+    }
 }
 
 // ###########

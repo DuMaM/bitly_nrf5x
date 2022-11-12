@@ -316,7 +316,7 @@ void ads129x_write_data_continuous(void);
 void ads129x_read_data_single(void);
 void ads129x_write_data_single(void);
 
-int ads129x_get_device_id(uint8_t *dev_id);
+uint8_t ads129x_get_device_id();
 void ads129x_setup();
 void ads129x_print(bool _print);
 
@@ -326,5 +326,6 @@ void ads129x_data_enable();
 void ads129x_data_disable();
 bool ads129x_get_status();
 int16_t ads129x_set_data_rate(uint16_t data_rate);
+void ads129x_dump_regs();
 
 #endif
