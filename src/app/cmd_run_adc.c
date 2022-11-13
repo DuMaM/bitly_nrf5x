@@ -20,7 +20,7 @@ LOG_MODULE_DECLARE(main);
 
 static uint32_t bytes_to_send = 1024;
 
-static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
+static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
 {
     uint32_t prog = 0;
     uint8_t *analog_data_ptr = test_data_buffer;
@@ -83,7 +83,7 @@ static void adc_test_run(struct k_work *item)
     ads129x_reset_data();
     LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
-    prog = send_test_sim_data(bytes_to_send);
+    prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
 
