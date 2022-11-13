@@ -99,6 +99,11 @@ static void adc_test_run(struct k_work *item)
 
     instruction_print();
 
+    k_thread_runtime_stats_t rt_stats_thread;
+    k_tid_t current = k_current_get();
+    k_thread_runtime_stats_get(current, &rt_stats_thread);
+    LOG_INF("TH: %s Cycles: %llu", current->name, rt_stats_thread.execution_cycles);
+
     return;
 }
 
