@@ -783,7 +783,7 @@ void ads129x_dump_regs()
 // # THREAD
 // ###########
 
-void ads129x_main_thread(void)
+void ads129x_th(void)
 {
 
     pipe_packet_u tx_data;
@@ -795,7 +795,7 @@ void ads129x_main_thread(void)
     struct spi_buf ads129x_rx_bufs[] = {{.buf = tx_data.packet.leads._buffer, .len = ADS129X_SPI_PACKAGE_SIZE}};
     struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
 
-    /* track statsu of buffers */
+    /* track status of buffers */
     size_t total_size = ADS129x_DATA_BUFFER_SIZE;
     size_t bytes_written = 0;
 
@@ -812,7 +812,7 @@ void ads129x_main_thread(void)
          * go to next loop iteration (the semaphore might have been given
          * again); else, make the CPU idle.
          */
-        if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0)
+        if (k_sem_take(&ads129x_new_data, K_USEC(1000)) == 0)
         {
 
             /* add timestamp */
@@ -842,6 +842,6 @@ void ads129x_main_thread(void)
     }
 }
 
-K_THREAD_DEFINE(ads129x_th, STACKSIZE, ads129x_main_thread, NULL, NULL, NULL, PRIORITY, K_ESSENTIAL, 0);
+K_THREAD_DEFINE(thread_ads129x, STACKSIZE, ads129x_th, NULL, NULL, NULL, PRIORITY, K_ESSENTIAL, 0);
 
 #endif

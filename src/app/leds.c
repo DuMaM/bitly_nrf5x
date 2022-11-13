@@ -88,4 +88,4 @@ void blink_th(void *_missed)
     }
 }
 
-K_THREAD_DEFINE(blink_thread, STACKSIZE, blink_th, NULL, NULL, NULL, PRIORITY, 0, 1000);
+K_THREAD_DEFINE(thread_blink, STACKSIZE, blink_th, NULL, NULL, NULL, PRIORITY, 0, 1000);
