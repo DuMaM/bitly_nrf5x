@@ -614,6 +614,8 @@ void ads129x_init(void)
 
 void ads129x_setup(void)
 {
+    LOG_INF("Setup ecg device");
+
     // Wait for 18 tCLKs AKA 30*18 microseconds
     ads129x_init();
     gpio_pin_set_dt(&reset_spec, 1);
@@ -626,20 +628,16 @@ void ads129x_setup(void)
     // device wakes up in RDATAC mode, so send stop signal
     ads129x_sdatac();
 
-    // enable 32kHz sample-rate
-    int16_t data_rate = ads129x_get_reg_DR_from_speed(32000);
-    uint8_t reg_val = 0;
-    WRITE_BIT(reg_val, ADS129X_BIT_HR, 1);
-    WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate);
-    ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
+    /*
+     * enable 32kHz sample-rate
+     */
+    ads129x_set_data_rate(500);
 
-    // enable internal reference
-    uint8_t enable_internal_reference = (1 << ADS129X_BIT_PD_REFBUF) | (1 << 6);
-    ads129x_safe_write_register(ADS129X_REG_CONFIG3, enable_internal_reference);
-
-    uint8_t dev_id = 0;
-    ads129x_get_device_id(&dev_id);
-    LOG_INF("Device ID: %d", dev_id);
+    /*
+     * enable internal reference
+     * this free bit is a previous reserved value
+     */
+    ads129x_safe_write_register(ADS129X_REG_CONFIG3, (1 << ADS129X_BIT_PD_REFBUF) + (1 << 6));
 
     // setup channels
     ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
