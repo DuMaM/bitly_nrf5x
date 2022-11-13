@@ -639,9 +639,10 @@ void ads129x_setup(void)
     ads129x_sdatac();
 
     /*
-     * enable 32kHz sample-rate
+     * enable 2kHz sample-rate
+     * 4kHz is max which can be handle by BLE 5.2
      */
-    ads129x_set_data_rate(500);
+    ads129x_set_data_rate(2000);
 
     /*
      * enable internal reference
