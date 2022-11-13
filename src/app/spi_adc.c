@@ -13,6 +13,7 @@
  * as first line to your sketch.
  *
  * Based on code by Conor Russomanno (https://github.com/conorrussomanno/ADS1299)
+ * https://github.com/ferdinandkeil/ADS129X
  * Modified by Ferdinand Keil
  */
 
@@ -72,15 +73,15 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 #define SPI_NODE DT_NODELABEL(nrf53_spi)
 
 #define BYTE_TO_BINARY_PATTERN "0b%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BINARY(byte)  \
-  (byte & 0x80 ? '1' : '0'), \
-  (byte & 0x40 ? '1' : '0'), \
-  (byte & 0x20 ? '1' : '0'), \
-  (byte & 0x10 ? '1' : '0'), \
-  (byte & 0x08 ? '1' : '0'), \
-  (byte & 0x04 ? '1' : '0'), \
-  (byte & 0x02 ? '1' : '0'), \
-  (byte & 0x01 ? '1' : '0')
+#define BYTE_TO_BINARY(byte)       \
+    (byte & 0x80 ? '1' : '0'),     \
+        (byte & 0x40 ? '1' : '0'), \
+        (byte & 0x20 ? '1' : '0'), \
+        (byte & 0x10 ? '1' : '0'), \
+        (byte & 0x08 ? '1' : '0'), \
+        (byte & 0x04 ? '1' : '0'), \
+        (byte & 0x02 ? '1' : '0'), \
+        (byte & 0x01 ? '1' : '0')
 
 // ###########
 // # BUFFER
@@ -105,10 +106,11 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
 {
     int rc = 0;
     uint32_t total = size;
-    size_t   bytes_read;
-    size_t   min_size = sizeof(pipe_packet_u);
+    size_t bytes_read;
+    size_t min_size = sizeof(pipe_packet_u);
 
-    while (1) {
+    while (1)
+    {
         /**
          * sometimes we run this function to fetch last remaining
          * chunk of data, this can be smaller that pipe package data
@@ -117,23 +119,31 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
          * there is a second condition when we reduced
          * our size because pipe was not able to give all data at once
          */
-        if (size < min_size) {
+        if (size < min_size)
+        {
             min_size = size;
         }
 
         rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_MSEC(100));
 
-        if (rc == -EINVAL) {
+        if (rc == -EINVAL)
+        {
             LOG_ERR("Bad input data: size=%d, min_size=%d, read=%d", size, min_size, bytes_read);
             break;
-        } else if ((rc < 0) || (bytes_read < min_size)) {
+        }
+        else if ((rc < 0) || (bytes_read < min_size))
+        {
             LOG_WRN("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
             continue;
-        } else if (bytes_read < size) {
+        }
+        else if (bytes_read < size)
+        {
             LOG_WRN("Buffer is not fully filled - moving");
             size -= bytes_read;
             load_data += bytes_read;
-        } else {
+        }
+        else
+        {
             /* All data was received */
             break;
         }
@@ -660,17 +670,26 @@ void ads129x_setup(void)
 // drive adc config
 bool ecg_status = false;
 
-int16_t ads129x_get_reg_DR_from_speed(uint16_t expression) {
+int16_t ads129x_get_reg_DR_from_speed(uint16_t expression)
+{
     switch (expression)
     {
-        case 32000: return 0b000;
-        case 16000: return 0b001;
-        case 8000: return 0b010;
-        case 4000: return 0b011;
-        case 2000: return 0b100;
-        case 1000: return 0b101;
-        case 500: return 0b110;
-        default: return -1;
+    case 32000:
+        return 0b000;
+    case 16000:
+        return 0b001;
+    case 8000:
+        return 0b010;
+    case 4000:
+        return 0b011;
+    case 2000:
+        return 0b100;
+    case 1000:
+        return 0b101;
+    case 500:
+        return 0b110;
+    default:
+        return -1;
     }
 }
 
@@ -694,11 +713,13 @@ void ads129x_data_disable()
     ecg_status = false;
 }
 
-bool ads129x_get_status() {
+bool ads129x_get_status()
+{
     return ecg_status;
 }
 
-int16_t ads129x_set_data_rate(uint16_t data_rate) {
+int16_t ads129x_set_data_rate(uint16_t data_rate)
+{
     int16_t data_rate_code = ads129x_get_reg_DR_from_speed(data_rate);
 
     if (data_rate_code < 0)
@@ -707,7 +728,7 @@ int16_t ads129x_set_data_rate(uint16_t data_rate) {
         return -EINVAL;
     }
 
-    LOG_INF("Setting data rate to: %"PRIu16, data_rate);
+    LOG_INF("Setting data rate to: %" PRIu16, data_rate);
     uint8_t reg_val = 0;
     ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
 
