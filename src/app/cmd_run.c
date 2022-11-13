@@ -108,7 +108,7 @@ static void performance_test_received(const bt_performance_test_metrics_t *met)
     if (kb_tmp != kb)
     {
         kb = kb_tmp;
-        LOG_INF("Got next 10kB package (%"PRIu32")...", met->write_len);
+        LOG_INF("<- 10kB package (%"PRIu32")...", met->write_len);
     }
 
     // /*
