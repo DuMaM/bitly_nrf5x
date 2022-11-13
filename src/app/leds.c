@@ -40,64 +40,52 @@ LOG_MODULE_DECLARE(main);
 #error "Unsupported board: led2 devicetree alias is not defined"
 #endif
 
-struct led
+typedef struct _led_config
 {
     struct gpio_dt_spec spec;
     const char *gpio_pin_name;
-};
+} led_config_t;
 
-static const struct led led1 = {
-    .spec = GPIO_DT_SPEC_GET_OR(LED1_NODE, gpios, {0}),
-    .gpio_pin_name = DT_PROP_OR(LED1_NODE, label, ""),
-};
-
-static const struct led led2 = {
-    .spec = GPIO_DT_SPEC_GET_OR(LED2_NODE, gpios, {0}),
-    .gpio_pin_name = DT_PROP_OR(LED2_NODE, label, ""),
-};
-
-static const struct led led3 = {
-    .spec = GPIO_DT_SPEC_GET_OR(LED3_NODE, gpios, {0}),
-    .gpio_pin_name = DT_PROP_OR(LED3_NODE, label, ""),
-};
-
-void blink(const struct led *led, uint32_t sleep_ms)
+void blink_th(void *_missed)
 {
-    const struct gpio_dt_spec *spec = &led->spec;
-    int cnt = 0;
     int ret;
+    static led_config_t leds[] = {{
+                                      .spec = GPIO_DT_SPEC_GET_OR(LED1_NODE, gpios, {0}),
+                                      .gpio_pin_name = DT_PROP_OR(LED1_NODE, label, ""),
+                                  },
+                                  {
+                                      .spec = GPIO_DT_SPEC_GET_OR(LED2_NODE, gpios, {0}),
+                                      .gpio_pin_name = DT_PROP_OR(LED2_NODE, label, ""),
+                                  },
+                                  {
+                                      .spec = GPIO_DT_SPEC_GET_OR(LED3_NODE, gpios, {0}),
+                                      .gpio_pin_name = DT_PROP_OR(LED3_NODE, label, ""),
+                                  }};
 
-    if (!device_is_ready(spec->port))
+    for (int i = 0; i < 3; i++)
     {
-        LOG_ERR("Error: %s device is not ready\n", spec->port->name);
-        return;
-    }
+        if (!device_is_ready(leds[i].spec.port))
+        {
+            LOG_ERR("Error: %s device is not ready\n", leds[i].spec.port->name);
+            return;
+        }
 
-    ret = gpio_pin_configure_dt(spec, GPIO_OUTPUT);
-    if (ret != 0)
-    {
-        LOG_ERR("Error %d: failed to configure pin %d (LED '%s')", ret, spec->pin, led->gpio_pin_name);
-        return;
+        ret = gpio_pin_configure_dt(&leds[i].spec, GPIO_OUTPUT);
+        if (ret != 0)
+        {
+            LOG_ERR("Error %d: failed to configure pin %d (LED '%s')", ret, leds[i].spec.pin, leds[i].gpio_pin_name);
+            return;
+        }
     }
 
     while (1)
     {
-        gpio_pin_set(spec->port, spec->pin, cnt % 2);
-        k_msleep(sleep_ms);
-        cnt++;
+        for (int i = 0; i < 3; i++)
+        {
+            gpio_pin_toggle(leds[i].spec.port, leds[i].spec.pin);
+            k_msleep(330);
+        }
     }
 }
 
-#define LED_BLINK_SLEEP_MS 900
-#define LED1_BLINK_OFFSET_MS 0
-#define LED2_BLINK_OFFSET_MS (uint32_t)(LED_BLINK_SLEEP_MS / 3)
-#define LED3_BLINK_OFFSET_MS (uint32_t)(LED_BLINK_SLEEP_MS / 3 * 2)
-
-void blink_th(void *ledx)
-{
-    blink(ledx, LED_BLINK_SLEEP_MS);
-}
-
-K_THREAD_DEFINE(blink1_th, STACKSIZE, blink_th, &led1, NULL, NULL, PRIORITY, 0, LED1_BLINK_OFFSET_MS);
-K_THREAD_DEFINE(blink2_th, STACKSIZE, blink_th, &led2, NULL, NULL, PRIORITY, 0, LED2_BLINK_OFFSET_MS);
-K_THREAD_DEFINE(blink3_th, STACKSIZE, blink_th, &led3, NULL, NULL, PRIORITY, 0, LED3_BLINK_OFFSET_MS);
+K_THREAD_DEFINE(blink_thread, STACKSIZE, blink_th, NULL, NULL, NULL, PRIORITY, 0, 1000);
