@@ -778,12 +778,11 @@ void ads129x_main_thread(void)
     size_t bytes_written = 0;
 
     /* tmp vars*/
-    uint32_t lead1 = 0;
-    uint32_t lead2 = 0;
+    int32_t lead1 = 0;
+    int32_t lead2 = 0;
 
     /* setup first */
     ads129x_setup();
-
     for (;;)
     {
         /*
@@ -796,6 +795,7 @@ void ads129x_main_thread(void)
 
             /* add timestamp */
             tx_data.packet.timestamp = k_uptime_get() - timestamp;
+            conv_u24_to_raw(tx_data.packet.timestamp, tx_data.buffer, 0);
 
             /* do processing */
             /* NOTE: Work directly on a ring buffer memory */
@@ -803,8 +803,8 @@ void ads129x_main_thread(void)
             if (!ret)
             {
                 /* add missing leads */
-                lead1 = tx_data.packet.leads._leads.lead1;
-                lead2 = tx_data.packet.leads._leads.lead2;
+                lead1 = conv_u24_to_i32(conv_raw_to_u24(tx_data.packet.leads._buffer, ADS129x_LEAD1_OFFSET));
+                lead2 = conv_u24_to_i32(conv_raw_to_u24(tx_data.packet.leads._buffer, ADS129x_LEAD2_OFFSET));
                 conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_LEAD3_OFFSET);
                 conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVR_OFFSET);
                 conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVL_OFFSET);
