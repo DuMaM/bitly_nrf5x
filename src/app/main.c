@@ -8,26 +8,13 @@
 #include <cmd.h>
 #include <bt_test.h>
 #include <main.h>
-#include <zephyr/drivers/hwinfo.h>
 
 // logging
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main);
 
-// work queue
-K_THREAD_STACK_DEFINE(main_work_q_stack, MAIN_QUEUE_STACK_SIZE);
-struct k_work_q main_work_q;
-const struct k_work_queue_config config = {
-    .name =  "userworkq",
-    .no_yield = false,
-};
-
 void main(void)
 {
-    /* init work queue */
-    k_work_queue_init(&main_work_q);
-    k_work_queue_start(&main_work_q, main_work_q_stack, K_THREAD_STACK_SIZEOF(main_work_q_stack), MAIN_QUEUE_PRIORITY, &config);
-
     /* init pheriferials */
     app_usb_init();
     bt_init();

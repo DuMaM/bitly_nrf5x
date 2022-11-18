@@ -5,6 +5,7 @@
 #include <main.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/kernel.h>
 
 #include <performance_test.h>
 #include "img_file.h"
@@ -14,7 +15,11 @@ extern uint16_t test_data_buffer_size;
 
 LOG_MODULE_DECLARE(main);
 
-static void test_run(struct k_work *item)
+
+K_THREAD_STACK_DEFINE(simple_stack, 4096);
+struct k_thread simple_thread = {.name = "cmd_simple"};
+
+static void simple_test_run()
 {
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     const struct bt_conn_le_phy_param *phy = test_params.phy;
@@ -78,11 +83,14 @@ static void test_run(struct k_work *item)
     return;
 }
 
-struct k_work test_run_simple;
 int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     /* initialize work item for test */
-    k_work_init(&test_run_simple, test_run);
-    k_work_submit_to_queue(&main_work_q, &test_run_simple);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&simple_thread, simple_stack,
+                                    K_THREAD_STACK_SIZEOF(simple_stack),
+                                    simple_test_run,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
     return 0;
 }

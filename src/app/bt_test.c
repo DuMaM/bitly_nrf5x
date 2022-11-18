@@ -146,7 +146,7 @@ static void scan_init(void)
     LOG_INF("Scan filters are enabled");
 }
 
-void scan_start(struct k_work *item)
+void scan_start()
 {
     // think of bt_le_scan_start
     int err = bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
@@ -161,7 +161,7 @@ void scan_start(struct k_work *item)
     return;
 }
 
-void adv_start(struct k_work *item)
+void adv_start()
 {
     struct bt_le_adv_param *adv_param =
         BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
@@ -397,7 +397,7 @@ static void le_data_length_updated(struct bt_conn *conn,
     }
 }
 
-void config_update_phy(struct k_work *item)
+void config_update_phy()
 {
     const struct bt_conn_le_phy_param *phy = test_params.phy;
     int err = 0;
@@ -427,7 +427,7 @@ void config_update_phy(struct k_work *item)
     }
 }
 
-void config_update_len(struct k_work *item)
+void config_update_len()
 {
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
     int err = 0;
@@ -459,7 +459,7 @@ void config_update_len(struct k_work *item)
     }
 }
 
-void config_update_param(struct k_work *item)
+void config_update_param()
 {
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     int err = 0;

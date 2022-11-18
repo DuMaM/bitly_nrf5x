@@ -11,13 +11,13 @@ void bt_init(void);
 struct bt_conn *getSettings(void);
 volatile bool isTestReady(void);
 void restore_state();
-void scan_start(struct k_work *item);
-void adv_start(struct k_work *item);
+void scan_start();
+void adv_start();
 
 int connection_configuration_set();
-void config_update_param(struct k_work *item);
-void config_update_len(struct k_work *item);
-void config_update_phy(struct k_work *item);
+void config_update_param();
+void config_update_len();
+void config_update_phy();
 
 extern struct bt_performance_test performance_test;
 #endif /* _BT_TEST_H_ */

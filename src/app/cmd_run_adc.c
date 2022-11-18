@@ -18,6 +18,8 @@ LOG_MODULE_DECLARE(main);
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
 
+K_THREAD_STACK_DEFINE(ecg_ble_stack, 4096);
+struct k_thread ecg_ble_thread;
 static uint32_t bytes_to_send = 1024;
 
 static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
@@ -68,7 +70,7 @@ static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
     return prog;
 }
 
-static void adc_test_run(struct k_work *item)
+static void adc_test_run()
 {
     int64_t delta;
     uint32_t prog = 0;
@@ -99,7 +101,6 @@ static void adc_test_run(struct k_work *item)
     return;
 }
 
-struct k_work test_run_adc;
 int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     if (argc == 1)
@@ -136,8 +137,14 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     }
 
     /* initialize work item for test */
-    k_work_init(&test_run_adc, adc_test_run);
-    k_work_submit_to_queue(&main_work_q, &test_run_adc);
+    k_tid_t my_tid = k_thread_create(&ecg_ble_thread, ecg_ble_stack,
+                                    K_THREAD_STACK_SIZEOF(ecg_ble_stack),
+                                    adc_test_run,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
+
+    k_thread_name_set(my_tid, "cmd_adc");
+
     return 0;
 }
 

@@ -2,15 +2,20 @@
 #include <bt_test.h>
 #include <main.h>
 
+K_THREAD_STACK_DEFINE(connect_stack, 1024);
+struct k_thread connect_thread;
+
 // add connect command
 static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv)
 {
     shell_print(shell, "\nSlave role.\n");
 
-    /* initialize work item for scanning */
-    struct k_work adv_start_work;
-    k_work_init(&adv_start_work, adv_start);
-    k_work_submit_to_queue(&main_work_q, &adv_start_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&connect_thread, connect_stack,
+                                    K_THREAD_STACK_SIZEOF(connect_stack),
+                                    adv_start,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -20,10 +25,12 @@ static int set_role_to_master(const struct shell *shell, size_t argc, char **arg
     shell_print(shell, "\nMaster role.\n");
     restore_state();
 
-    /* initialize work item for scanning */
-    struct k_work scan_start_work;
-    k_work_init(&scan_start_work, scan_start);
-    k_work_submit_to_queue(&main_work_q, &scan_start_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&connect_thread, connect_stack,
+                                    K_THREAD_STACK_SIZEOF(connect_stack),
+                                    scan_start,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }

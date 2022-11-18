@@ -15,6 +15,11 @@ extern uint16_t test_data_buffer_size;
 static uint8_t test_runs = 1;
 static int64_t stamp;
 
+
+K_THREAD_STACK_DEFINE(sim_stack, 4096);
+struct k_thread sim_thread;
+
+
 LOG_MODULE_DECLARE(main);
 
 #define SIM_VALUE_BYTE_SIZE 3
@@ -101,7 +106,7 @@ static uint32_t send_test_sim_data()
     return sim_written;
 }
 
-static void test_run(struct k_work *item)
+static void sim_test_run()
 {
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     const struct bt_conn_le_phy_param *phy = test_params.phy;
@@ -144,7 +149,6 @@ static void test_run(struct k_work *item)
     return;
 }
 
-struct k_work test_run_sim;
 int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     if (argc == 1)
@@ -168,7 +172,12 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
     }
 
     /* initialize work item for test */
-    k_work_init(&test_run_sim, test_run);
-    k_work_submit_to_queue(&main_work_q, &test_run_sim);
+    k_tid_t my_tid = k_thread_create(&sim_thread, sim_stack,
+                                    K_THREAD_STACK_SIZEOF(sim_stack),
+                                    sim_test_run,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
+    k_thread_name_set(my_tid, "cmd_sim");
+
     return 0;
 }
