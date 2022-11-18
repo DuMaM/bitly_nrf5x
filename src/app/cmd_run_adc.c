@@ -73,20 +73,17 @@ static void adc_test_run(struct k_work *item)
     int64_t delta;
     uint32_t prog = 0;
 
-
-    if (!ads129x_get_status()) {
-        LOG_ERR("Adc data is not enabled");
-    }
-
+    // allow to return from shell
+    k_msleep(100);
     /* get cycle stamp */
     LOG_INF("=== Reseting data buffer ===");
-    ads129x_reset_data();
+    ads129x_data_enable();
     LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
     prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
-
+    ads129x_data_disable();
     /* read back char from peer */
     int err = bt_performance_test_read(&performance_test);
     if (err)
@@ -98,11 +95,6 @@ static void adc_test_run(struct k_work *item)
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
 
     instruction_print();
-
-    k_thread_runtime_stats_t rt_stats_thread;
-    k_tid_t current = k_current_get();
-    k_thread_runtime_stats_get(current, &rt_stats_thread);
-    LOG_INF("TH: %s Cycles: %llu", current->name, rt_stats_thread.execution_cycles);
 
     return;
 }

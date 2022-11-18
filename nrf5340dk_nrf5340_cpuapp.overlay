@@ -1,6 +1,9 @@
-&uart0 {
-    /delete-property/ rts-pin;
-    /delete-property/ cts-pin;
+&wdt {
+    status = "disabled";
+};
+
+&wdt1 {
+    status = "disabled";
 };
 
 &i2c1 {
@@ -15,18 +18,27 @@
     status = "disabled";
 };
 
+&spi4 {
+    status = "disabled";
+};
+
 &qspi {
     status = "disabled";
 };
 
+&adc {
+	status = "disabled";
+};
 
 &uart0 {
-	status = "okay";
+    status = "okay";
 	compatible = "nordic,nrf-uarte";
 	current-speed = <115200>;
 	pinctrl-0 = <&uart0_default>;
 	pinctrl-1 = <&uart0_sleep>;
 	pinctrl-names = "default", "sleep";
+    /delete-property/ rts-pin;
+    /delete-property/ cts-pin;
 };
 
 &pinctrl {

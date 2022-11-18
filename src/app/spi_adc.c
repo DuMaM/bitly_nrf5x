@@ -40,7 +40,7 @@
 /* size of stack area used by each thread */
 #define STACKSIZE 1024
 /* scheduling priority used by each thread */
-#define PRIORITY 8
+#define PRIORITY 6
 K_SEM_DEFINE(ads129x_new_data, 0, 1);
 static bool ads129x_print_data = false;
 
@@ -100,7 +100,7 @@ K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
 
 // handle data stream
 int64_t timestamp = 0;
-K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE, 4);
+K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE * 12, 4);
 
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
 {
@@ -124,7 +124,7 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
             min_size = size;
         }
 
-        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_MSEC(100));
+        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_SECONDS(10));
 
         if (rc == -EINVAL)
         {
@@ -133,12 +133,12 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
         }
         else if ((rc < 0) || (bytes_read < min_size))
         {
-            LOG_WRN("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
+            LOG_DBG("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
             continue;
         }
         else if (bytes_read < size)
         {
-            LOG_WRN("Buffer is not fully filled - moving");
+            LOG_DBG("Buffer is not fully filled - moving");
             size -= bytes_read;
             load_data += bytes_read;
         }
@@ -567,6 +567,7 @@ void ads129x_init(void)
 {
     // SPI Setup
     int ret;
+
     LOG_INF("ADS129X spi init");
     if (!device_is_ready(ads129x_spi))
     {
@@ -812,7 +813,7 @@ void ads129x_th(void)
          * go to next loop iteration (the semaphore might have been given
          * again); else, make the CPU idle.
          */
-        if (k_sem_take(&ads129x_new_data, K_USEC(1000)) == 0)
+        if (k_sem_take(&ads129x_new_data, K_FOREVER) == 0)
         {
 
             /* add timestamp */
@@ -837,7 +838,7 @@ void ads129x_th(void)
 
             /* send data to consumers */
             /* send data to the consumers */
-            k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_USEC(100));
+            k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
         }
     }
 }
