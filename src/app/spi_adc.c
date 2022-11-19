@@ -40,7 +40,7 @@
 /* size of stack area used by each thread */
 #define STACKSIZE 1024
 /* scheduling priority used by each thread */
-#define PRIORITY 6
+#define PRIORITY 9
 K_SEM_DEFINE(ads129x_new_data, 0, 1);
 static bool ads129x_print_data = false;
 

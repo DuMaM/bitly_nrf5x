@@ -15,7 +15,7 @@ static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv
                                     K_THREAD_STACK_SIZEOF(connect_stack),
                                     adv_start,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -30,7 +30,7 @@ static int set_role_to_master(const struct shell *shell, size_t argc, char **arg
                                     K_THREAD_STACK_SIZEOF(connect_stack),
                                     scan_start,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }

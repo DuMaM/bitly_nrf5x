@@ -34,7 +34,7 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -52,7 +52,7 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -71,7 +71,7 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -95,7 +95,7 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -140,7 +140,7 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_len,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -179,7 +179,7 @@ static int cmd_data_timing(const struct shell *shell, size_t argc, char **argv)
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_len,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -224,7 +224,7 @@ static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_param,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }

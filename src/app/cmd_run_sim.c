@@ -176,7 +176,7 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
                                     K_THREAD_STACK_SIZEOF(sim_stack),
                                     sim_test_run,
                                     NULL, NULL, NULL,
-                                    6, 0, K_NO_WAIT);
+                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
     k_thread_name_set(my_tid, "cmd_sim");
 
     return 0;

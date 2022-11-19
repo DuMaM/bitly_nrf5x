@@ -17,6 +17,8 @@
 #define MAX_CONN_INTERVAL 3200
 #define SUPERVISION_TIMEOUT 1000
 
+#define SHELL_TEST_RUN_PRIO 9
+
 typedef struct
 {
     struct bt_le_conn_param *conn_param;
