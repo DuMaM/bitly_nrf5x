@@ -13,6 +13,7 @@
  * as first line to your sketch.
  *
  * Based on code by Conor Russomanno (https://github.com/conorrussomanno/ADS1299)
+ * https://github.com/ferdinandkeil/ADS129X
  * Modified by Ferdinand Keil
  */
 
@@ -39,7 +40,7 @@
 /* size of stack area used by each thread */
 #define STACKSIZE 1024
 /* scheduling priority used by each thread */
-#define PRIORITY 8
+#define PRIORITY 6
 K_SEM_DEFINE(ads129x_new_data, 0, 1);
 static bool ads129x_print_data = false;
 
@@ -72,15 +73,15 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 #define SPI_NODE DT_NODELABEL(nrf53_spi)
 
 #define BYTE_TO_BINARY_PATTERN "0b%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BINARY(byte)  \
-  (byte & 0x80 ? '1' : '0'), \
-  (byte & 0x40 ? '1' : '0'), \
-  (byte & 0x20 ? '1' : '0'), \
-  (byte & 0x10 ? '1' : '0'), \
-  (byte & 0x08 ? '1' : '0'), \
-  (byte & 0x04 ? '1' : '0'), \
-  (byte & 0x02 ? '1' : '0'), \
-  (byte & 0x01 ? '1' : '0')
+#define BYTE_TO_BINARY(byte)       \
+    (byte & 0x80 ? '1' : '0'),     \
+        (byte & 0x40 ? '1' : '0'), \
+        (byte & 0x20 ? '1' : '0'), \
+        (byte & 0x10 ? '1' : '0'), \
+        (byte & 0x08 ? '1' : '0'), \
+        (byte & 0x04 ? '1' : '0'), \
+        (byte & 0x02 ? '1' : '0'), \
+        (byte & 0x01 ? '1' : '0')
 
 // ###########
 // # BUFFER
@@ -99,16 +100,17 @@ K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
 
 // handle data stream
 int64_t timestamp = 0;
-K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE, 4);
+K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE * 12, 4);
 
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
 {
     int rc = 0;
     uint32_t total = size;
-    size_t   bytes_read;
-    size_t   min_size = sizeof(pipe_packet_u);
+    size_t bytes_read;
+    size_t min_size = sizeof(pipe_packet_u);
 
-    while (1) {
+    while (1)
+    {
         /**
          * sometimes we run this function to fetch last remaining
          * chunk of data, this can be smaller that pipe package data
@@ -117,23 +119,31 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
          * there is a second condition when we reduced
          * our size because pipe was not able to give all data at once
          */
-        if (size < min_size) {
+        if (size < min_size)
+        {
             min_size = size;
         }
 
-        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_MSEC(100));
+        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_SECONDS(10));
 
-        if (rc == -EINVAL) {
+        if (rc == -EINVAL)
+        {
             LOG_ERR("Bad input data: size=%d, min_size=%d, read=%d", size, min_size, bytes_read);
             break;
-        } else if ((rc < 0) || (bytes_read < min_size)) {
-            LOG_WRN("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
+        }
+        else if ((rc < 0) || (bytes_read < min_size))
+        {
+            LOG_DBG("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
             continue;
-        } else if (bytes_read < size) {
-            LOG_WRN("Buffer is not fully filled - moving");
+        }
+        else if (bytes_read < size)
+        {
+            LOG_DBG("Buffer is not fully filled - moving");
             size -= bytes_read;
             load_data += bytes_read;
-        } else {
+        }
+        else
+        {
             /* All data was received */
             break;
         }
@@ -251,19 +261,7 @@ static int ads129x_access(const struct device *_spi,
          .len = _len}};
     struct spi_buf_set tx = {.buffers = tx_bufs};
 
-    if (cmd & ADS129X_CMD_RDATA)
-    {
-        tx.count = 1;
-        struct spi_buf rx_bufs[] = {
-            // skip response for cmd
-            {.buf = NULL, .len = sizeof(cmd)},
-            // get response after sending value number of regs
-            {.buf = _data,
-             .len = _len}};
-        struct spi_buf_set rx = {.buffers = rx_bufs, .count = sizeof(rx_bufs) / sizeof(rx_bufs[0])};
-        return spi_transceive(_spi, _spi_cfg, &tx, &rx);
-    }
-    else if (cmd & ADS129X_CMD_RREG)
+    if (cmd & ADS129X_CMD_RREG)
     {
         tx.count = 2;
         struct spi_buf rx_bufs[] = {
@@ -280,6 +278,18 @@ static int ads129x_access(const struct device *_spi,
     {
         tx.count = 3;
         return spi_write(ads129x_spi, &ads129x_spi_cfg, &tx);
+    }
+    else if (cmd == ADS129X_CMD_RDATA)
+    {
+        tx.count = 1;
+        struct spi_buf rx_bufs[] = {
+            // skip response for cmd
+            {.buf = NULL, .len = sizeof(cmd)},
+            // get response after sending value number of regs
+            {.buf = _data,
+             .len = _len}};
+        struct spi_buf_set rx = {.buffers = rx_bufs, .count = sizeof(rx_bufs) / sizeof(rx_bufs[0])};
+        return spi_transceive(_spi, _spi_cfg, &tx, &rx);
     }
     else
     {
@@ -467,9 +477,9 @@ int ads129x_safe_write_register(uint8_t _address, uint8_t _value)
     ads129x_write_registers(_address, 1, &_value);
     ads129x_read_registers(_address, 1, &tmp);
 
+    LOG_INF("WR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(_value));
     if (tmp != _value)
     {
-        LOG_ERR("WR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(_value));
         LOG_ERR("RR: %02X (data=" BYTE_TO_BINARY_PATTERN ")", _address & 0x1F, BYTE_TO_BINARY(tmp));
         return -EIO;
     }
@@ -483,9 +493,11 @@ int ads129x_safe_write_register(uint8_t _address, uint8_t _value)
  * Read device ID.
  * @return device ID
  */
-int ads129x_get_device_id(uint8_t *dev_id)
+uint8_t ads129x_get_device_id()
 {
-    return ads129x_read_registers(ADS129X_REG_ID, 1, dev_id);
+    uint8_t dev_id = 0;
+    ads129x_read_registers(ADS129X_REG_ID, 1, &dev_id);
+    return dev_id;
 }
 
 /* add gpio callbacks */
@@ -521,7 +533,7 @@ void ads129x_drdy_callback_deinit()
 void ads129x_configChannel(uint8_t _channel, bool _powerDown, uint8_t _gain, uint8_t _mux)
 {
     uint8_t value = ((_powerDown & 1) << 7) | ((_gain & 7) << 4) | (_mux & 7);
-    ads129x_write_registers(ADS129X_REG_CH1SET + (_channel - 1), 1, &value);
+    ads129x_safe_write_register(ADS129X_REG_CH1SET + (_channel - 1), value);
 }
 
 void ads129x_print(bool _print)
@@ -555,6 +567,7 @@ void ads129x_init(void)
 {
     // SPI Setup
     int ret;
+
     LOG_INF("ADS129X spi init");
     if (!device_is_ready(ads129x_spi))
     {
@@ -612,6 +625,8 @@ void ads129x_init(void)
 
 void ads129x_setup(void)
 {
+    LOG_INF("Setup ecg device");
+
     // Wait for 18 tCLKs AKA 30*18 microseconds
     ads129x_init();
     gpio_pin_set_dt(&reset_spec, 1);
@@ -624,20 +639,17 @@ void ads129x_setup(void)
     // device wakes up in RDATAC mode, so send stop signal
     ads129x_sdatac();
 
-    // enable 32kHz sample-rate
-    int16_t data_rate = ads129x_get_reg_DR_from_speed(32000);
-    uint8_t reg_val = 0;
-    WRITE_BIT(reg_val, ADS129X_BIT_HR, 1);
-    WRITE_BIT(reg_val, ADS129X_BIT_DR0, data_rate);
-    ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
+    /*
+     * enable 2kHz sample-rate
+     * 4kHz is max which can be handle by BLE 5.2
+     */
+    ads129x_set_data_rate(2000);
 
-    // enable internal reference
-    uint8_t enable_internal_reference = (1 << ADS129X_BIT_PD_REFBUF) | (1 << 6);
-    ads129x_safe_write_register(ADS129X_REG_CONFIG3, enable_internal_reference);
-
-    uint8_t dev_id = 0;
-    ads129x_get_device_id(&dev_id);
-    LOG_INF("Device ID: %d", dev_id);
+    /*
+     * enable internal reference
+     * this free bit is a previous reserved value
+     */
+    ads129x_safe_write_register(ADS129X_REG_CONFIG3, (1 << ADS129X_BIT_PD_REFBUF) + (1 << 6));
 
     // setup channels
     ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
@@ -648,6 +660,9 @@ void ads129x_setup(void)
     }
 
     gpio_pin_set_dt(&start_spec, 0);
+
+    LOG_INF("Device ID: %d", ads129x_get_device_id());
+    ads129x_dump_regs();
 }
 
 // #########
@@ -657,17 +672,26 @@ void ads129x_setup(void)
 // drive adc config
 bool ecg_status = false;
 
-int16_t ads129x_get_reg_DR_from_speed(uint16_t expression) {
+int16_t ads129x_get_reg_DR_from_speed(uint16_t expression)
+{
     switch (expression)
     {
-        case 32000: return 0b000;
-        case 16000: return 0b001;
-        case 8000: return 0b010;
-        case 4000: return 0b011;
-        case 2000: return 0b100;
-        case 1000: return 0b101;
-        case 500: return 0b110;
-        default: return -1;
+    case 32000:
+        return 0b000;
+    case 16000:
+        return 0b001;
+    case 8000:
+        return 0b010;
+    case 4000:
+        return 0b011;
+    case 2000:
+        return 0b100;
+    case 1000:
+        return 0b101;
+    case 500:
+        return 0b110;
+    default:
+        return -1;
     }
 }
 
@@ -691,11 +715,13 @@ void ads129x_data_disable()
     ecg_status = false;
 }
 
-bool ads129x_get_status() {
+bool ads129x_get_status()
+{
     return ecg_status;
 }
 
-int16_t ads129x_set_data_rate(uint16_t data_rate) {
+int16_t ads129x_set_data_rate(uint16_t data_rate)
+{
     int16_t data_rate_code = ads129x_get_reg_DR_from_speed(data_rate);
 
     if (data_rate_code < 0)
@@ -704,7 +730,7 @@ int16_t ads129x_set_data_rate(uint16_t data_rate) {
         return -EINVAL;
     }
 
-    LOG_INF("Setting data rate to: %"PRIu16, data_rate);
+    LOG_INF("Setting data rate to: %" PRIu16, data_rate);
     uint8_t reg_val = 0;
     ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
 
@@ -720,11 +746,45 @@ int16_t ads129x_set_data_rate(uint16_t data_rate) {
     return 0;
 }
 
+void ads129x_dump_regs()
+{
+    uint8_t reg_val = 0;
+
+    struct _dump_regs
+    {
+        char *name;
+        uint8_t address;
+    };
+
+    struct _dump_regs regs[4] = {
+        {
+            .name = "Config1",
+            .address = ADS129X_REG_CONFIG1,
+        },
+        {
+            .name = "Config2",
+            .address = ADS129X_REG_CONFIG2,
+        },
+        {
+            .name = "Config3",
+            .address = ADS129X_REG_CONFIG3,
+        },
+        {
+            .name = "Config4",
+            .address = ADS129X_REG_CONFIG4,
+        }};
+    for (int i = 0; i < 4; i++)
+    {
+        ads129x_read_registers(regs[i].address, 1, &reg_val);
+        LOG_INF("%s: " BYTE_TO_BINARY_PATTERN, regs[i].name, BYTE_TO_BINARY(reg_val));
+    }
+}
+
 // ###########
 // # THREAD
 // ###########
 
-void ads129x_main_thread(void)
+void ads129x_th(void)
 {
 
     pipe_packet_u tx_data;
@@ -736,17 +796,16 @@ void ads129x_main_thread(void)
     struct spi_buf ads129x_rx_bufs[] = {{.buf = tx_data.packet.leads._buffer, .len = ADS129X_SPI_PACKAGE_SIZE}};
     struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
 
-    /* track statsu of buffers */
+    /* track status of buffers */
     size_t total_size = ADS129x_DATA_BUFFER_SIZE;
     size_t bytes_written = 0;
 
     /* tmp vars*/
-    uint32_t lead1 = 0;
-    uint32_t lead2 = 0;
+    int32_t lead1 = 0;
+    int32_t lead2 = 0;
 
     /* setup first */
     ads129x_setup();
-
     for (;;)
     {
         /*
@@ -754,11 +813,12 @@ void ads129x_main_thread(void)
          * go to next loop iteration (the semaphore might have been given
          * again); else, make the CPU idle.
          */
-        if (k_sem_take(&ads129x_new_data, K_USEC(100)) == 0)
+        if (k_sem_take(&ads129x_new_data, K_FOREVER) == 0)
         {
 
             /* add timestamp */
             tx_data.packet.timestamp = k_uptime_get() - timestamp;
+            conv_u24_to_raw(tx_data.packet.timestamp, tx_data.buffer, 0);
 
             /* do processing */
             /* NOTE: Work directly on a ring buffer memory */
@@ -766,8 +826,8 @@ void ads129x_main_thread(void)
             if (!ret)
             {
                 /* add missing leads */
-                lead1 = tx_data.packet.leads._leads.lead1;
-                lead2 = tx_data.packet.leads._leads.lead2;
+                lead1 = conv_u24_to_i32(conv_raw_to_u24(tx_data.packet.leads._buffer, ADS129x_LEAD1_OFFSET));
+                lead2 = conv_u24_to_i32(conv_raw_to_u24(tx_data.packet.leads._buffer, ADS129x_LEAD2_OFFSET));
                 conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_LEAD3_OFFSET);
                 conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVR_OFFSET);
                 conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVL_OFFSET);
@@ -778,11 +838,11 @@ void ads129x_main_thread(void)
 
             /* send data to consumers */
             /* send data to the consumers */
-            k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_USEC(100));
+            k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
         }
     }
 }
 
-K_THREAD_DEFINE(ads129x_th, STACKSIZE, ads129x_main_thread, NULL, NULL, NULL, PRIORITY, K_ESSENTIAL, 0);
+K_THREAD_DEFINE(thread_ads129x, STACKSIZE, ads129x_th, NULL, NULL, NULL, PRIORITY, K_ESSENTIAL, 0);
 
 #endif

@@ -68,6 +68,7 @@ static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv
         ads129x_data_disable();
         ads129x_data_enable();
     }
+    return 0;
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_role,

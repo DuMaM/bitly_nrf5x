@@ -256,7 +256,7 @@ typedef struct  __attribute__((__packed__)) _packet_12lead_struct
 
 typedef union _packet_12lead_u {
     packet_12lead_t _leads;
-    uint8_t _buffer[0];
+    uint8_t _buffer[sizeof(packet_12lead_t)];
 } packet_12lead_u;
 
 typedef struct  __attribute__((__packed__)) _pipe_packet {
@@ -266,7 +266,7 @@ typedef struct  __attribute__((__packed__)) _pipe_packet {
 
 typedef union _pipe_packet_u {
     pipe_packet_t packet;
-    uint8_t buffer[0];
+    uint8_t buffer[sizeof(pipe_packet_t)];
 } pipe_packet_u;
 
 
@@ -316,7 +316,7 @@ void ads129x_write_data_continuous(void);
 void ads129x_read_data_single(void);
 void ads129x_write_data_single(void);
 
-int ads129x_get_device_id(uint8_t *dev_id);
+uint8_t ads129x_get_device_id();
 void ads129x_setup();
 void ads129x_print(bool _print);
 
@@ -326,5 +326,6 @@ void ads129x_data_enable();
 void ads129x_data_disable();
 bool ads129x_get_status();
 int16_t ads129x_set_data_rate(uint16_t data_rate);
+void ads129x_dump_regs();
 
 #endif

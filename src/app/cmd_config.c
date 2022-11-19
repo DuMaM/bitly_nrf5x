@@ -10,6 +10,9 @@
 
 #include <zephyr/kernel.h>
 
+K_THREAD_STACK_DEFINE(config_stack, 1024);
+struct k_thread config_thread;
+
 test_params_t test_params = {
     // BT_LE_CONNECTION IS A WORKAROUND ON CHECKING MULTIPLE PARAM NEGOTIATION
     .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT),
@@ -18,7 +21,6 @@ test_params_t test_params = {
     .enable_rssi = true,
 };
 
-struct k_work cmd_phy_work;
 static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
 {
     test_params.phy->options = BT_CONN_LE_PHY_OPT_NONE;
@@ -27,8 +29,12 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_phy);
-    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+                                    K_THREAD_STACK_SIZEOF(config_stack),
+                                    config_update_phy,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -41,8 +47,12 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_phy);
-    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+                                    K_THREAD_STACK_SIZEOF(config_stack),
+                                    config_update_phy,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -56,8 +66,12 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_phy);
-    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+                                    K_THREAD_STACK_SIZEOF(config_stack),
+                                    config_update_phy,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -76,8 +90,12 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s",
                 phy_str(test_params.phy));
 
-    k_work_init(&cmd_phy_work, config_update_phy);
-    k_work_submit_to_queue(&main_work_q, &cmd_phy_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+                                    K_THREAD_STACK_SIZEOF(config_stack),
+                                    config_update_phy,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -87,7 +105,6 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
         */
 
 // data len
-struct k_work cmd_data_len_work;
 static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
 {
     uint16_t data_len;
@@ -118,13 +135,16 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "LE Data Packet Length set to: %d", data_len);
 
-    k_work_init(&cmd_data_len_work, config_update_len);
-    k_work_submit_to_queue(&main_work_q, &cmd_data_len_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+                                    K_THREAD_STACK_SIZEOF(config_stack),
+                                    config_update_len,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }
 
-struct k_work cmd_data_time_work;
 static int cmd_data_timing(const struct shell *shell, size_t argc, char **argv)
 {
     uint16_t data_time;
@@ -154,13 +174,16 @@ static int cmd_data_timing(const struct shell *shell, size_t argc, char **argv)
 
     shell_print(shell, "LE Data Packet Time set to: %d", data_time);
 
-    k_work_init(&cmd_data_time_work, config_update_len);
-    k_work_submit_to_queue(&main_work_q, &cmd_data_time_work);
+    /* initialize work item for test */
+    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+                                    K_THREAD_STACK_SIZEOF(config_stack),
+                                    config_update_len,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }
 
-struct k_work cmd_param_work;
 static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv)
 {
     uint16_t interval;
@@ -197,8 +220,11 @@ static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv
 
     shell_print(shell, "Connection interval set to: %d", interval);
 
-    k_work_init(&cmd_data_len_work, config_update_param);
-    k_work_submit_to_queue(&main_work_q, &cmd_data_len_work);
+    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+                                    K_THREAD_STACK_SIZEOF(config_stack),
+                                    config_update_param,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
 
     return 0;
 }

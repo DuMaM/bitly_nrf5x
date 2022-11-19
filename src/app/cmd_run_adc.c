@@ -17,28 +17,12 @@ static int64_t stamp;
 LOG_MODULE_DECLARE(main);
 
 #ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
-#define SIM_VALUE_BYTE_SIZE 3
 
-static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
-    #if SIM_VALUE_BYTE_SIZE >= 1
-                *(buffer + 0) = (uint8_t)(*(data));
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 2
-                *(buffer + 1) = (uint8_t)(*(data) >> 8);
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 3
-                *(buffer + 2) = (uint8_t)(*(data) >> 16);
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 4
-                *(buffer + 3) = (uint8_t)((*data) >> 24);
-    #endif
-
-    return SIM_VALUE_BYTE_SIZE;
-}
-
+K_THREAD_STACK_DEFINE(ecg_ble_stack, 4096);
+struct k_thread ecg_ble_thread;
 static uint32_t bytes_to_send = 1024;
 
-static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
+static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
 {
     uint32_t prog = 0;
     uint8_t *analog_data_ptr = test_data_buffer;
@@ -86,25 +70,22 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
     return prog;
 }
 
-static void adc_test_run(struct k_work *item)
+static void adc_test_run()
 {
     int64_t delta;
     uint32_t prog = 0;
 
-
-    if (!ads129x_get_status()) {
-        LOG_ERR("Adc data is not enabled");
-    }
-
+    // allow to return from shell
+    k_msleep(100);
     /* get cycle stamp */
     LOG_INF("=== Reseting data buffer ===");
-    ads129x_reset_data();
+    ads129x_data_enable();
     LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
-    prog = send_test_sim_data(bytes_to_send);
+    prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
-
+    ads129x_data_disable();
     /* read back char from peer */
     int err = bt_performance_test_read(&performance_test);
     if (err)
@@ -120,7 +101,6 @@ static void adc_test_run(struct k_work *item)
     return;
 }
 
-struct k_work test_run_adc;
 int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     if (argc == 1)
@@ -157,8 +137,14 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     }
 
     /* initialize work item for test */
-    k_work_init(&test_run_adc, adc_test_run);
-    k_work_submit_to_queue(&main_work_q, &test_run_adc);
+    k_tid_t my_tid = k_thread_create(&ecg_ble_thread, ecg_ble_stack,
+                                    K_THREAD_STACK_SIZEOF(ecg_ble_stack),
+                                    adc_test_run,
+                                    NULL, NULL, NULL,
+                                    6, 0, K_NO_WAIT);
+
+    k_thread_name_set(my_tid, "cmd_adc");
+
     return 0;
 }
 
