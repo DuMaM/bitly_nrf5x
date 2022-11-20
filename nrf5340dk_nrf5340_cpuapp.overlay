@@ -14,7 +14,34 @@
     status = "disabled";
 };
 
-&spi2 {
+
+&pinctrl {
+    spi2_default_alt: spi2_default_alt {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK, 1, 7)>,
+                    <NRF_PSEL(SPIM_MOSI, 1, 6)>,
+                    <NRF_PSEL(SPIM_MISO, 1, 5)>;
+        };
+    };
+
+};
+
+&spi1 {
+    status = "disabled";
+};
+
+nrf53_spi: &spi2 {
+    compatible = "nordic,nrf-spim";
+    status = "okay";
+    cs-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
+    interrupts = <11 2>;
+    pinctrl-0 = <&spi2_default_alt>;
+    pinctrl-names = "default";
+    miso-pull-down;
+};
+
+
+&spi3 {
     status = "disabled";
 };
 
@@ -27,47 +54,21 @@
 };
 
 &adc {
-	status = "disabled";
+    status = "disabled";
 };
 
 &uart0 {
     status = "okay";
-	compatible = "nordic,nrf-uarte";
-	current-speed = <115200>;
-	pinctrl-0 = <&uart0_default>;
-	pinctrl-1 = <&uart0_sleep>;
-	pinctrl-names = "default", "sleep";
+    compatible = "nordic,nrf-uarte";
+    current-speed = <115200>;
+    interrupts = <8 3>;
+    pinctrl-0 = <&uart0_default>;
+    pinctrl-1 = <&uart0_sleep>;
+    pinctrl-names = "default", "sleep";
     /delete-property/ rts-pin;
     /delete-property/ cts-pin;
 };
 
-&pinctrl {
-    spi1_default_alt: spi1_default_alt {
-        group1 {
-            psels = <NRF_PSEL(SPIM_SCK, 1, 7)>,
-                    <NRF_PSEL(SPIM_MOSI, 1, 6)>,
-                    <NRF_PSEL(SPIM_MISO, 1, 5)>;
-        };
-    };
-
-};
-
-nrf53_spi: &spi1 {
-    compatible = "nordic,nrf-spim";
-    status = "okay";
-    cs-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
-    pinctrl-0 = <&spi1_default_alt>;
-    pinctrl-names = "default";
-    miso-pull-down;
-
-// ads129x_sensor_spi: ads129x_spi@0 {
-//     compatible = "spi-device";
-//     reg = <0x0 >;
-//     spi-max-frequency = <4000000>;
-//     label = "ads129x_spi";
-//     status = "okay";
-// };
-};
 
 / {
     arduino_header: connector {
