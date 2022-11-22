@@ -126,7 +126,7 @@ static void adc_test_run()
     ads129x_data_enable();
     LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
-    prog = send_test_ecg_alt(bytes_to_send);
+    prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
     ads129x_data_disable();
