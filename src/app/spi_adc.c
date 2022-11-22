@@ -927,7 +927,7 @@ void ads129x_th(void)
          */
         if (k_sem_take(&ads129x_new_data, K_FOREVER) == 0)
         {
-            ads129x_read_data_continuous();
+            ads129x_set_data();
         }
     }
 }
