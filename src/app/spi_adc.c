@@ -35,7 +35,7 @@
 #include <spi_adc.h>
 #include <app_utils.h>
 
-#ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
+#ifdef CONFIG_SPI
 
 /* size of stack area used by each thread */
 #define STACKSIZE 1024
@@ -103,12 +103,19 @@ K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
 // ##########
 
 const struct device *ads129x_spi = DEVICE_DT_GET(SPI_NODE);
+#ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
 const struct spi_cs_control ads129x_cs_ctrl = {
     .gpio.port = DEVICE_DT_GET(DT_NODELABEL(gpio1)),
     .delay = ADS129X_SPI_CLOCK_DELAY,
     .gpio.pin = 4,
     .gpio.dt_flags = GPIO_ACTIVE_LOW};
-
+#else
+const struct spi_cs_control ads129x_cs_ctrl = {
+    .gpio.port = DEVICE_DT_GET(DT_NODELABEL(gpio0)),
+    .delay = ADS129X_SPI_CLOCK_DELAY,
+    .gpio.pin = 31,
+    .gpio.dt_flags = GPIO_ACTIVE_LOW};
+#endif
 // arduino lib was working with SPI_MODE1
 // what means
 // Clock Polarity (CPOL)    Clock Phase (CPHA)	Output Edge     Data Capture

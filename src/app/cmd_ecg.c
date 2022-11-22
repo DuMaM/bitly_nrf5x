@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
+#ifdef CONFIG_SPI
 LOG_MODULE_DECLARE(main);
 
 // add connect command

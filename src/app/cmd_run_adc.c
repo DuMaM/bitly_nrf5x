@@ -16,7 +16,7 @@ static int64_t stamp;
 
 LOG_MODULE_DECLARE(main);
 
-#ifdef CONFIG_BOARD_NRF5340DK_NRF5340_CPUAPP
+#ifdef CONFIG_SPI
 
 K_THREAD_STACK_DEFINE(ecg_ble_stack, 4096);
 struct k_thread ecg_ble_thread;

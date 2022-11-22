@@ -7,12 +7,61 @@ zephyr_udc0: &usbd {
     compatible = "nordic,nrf-usbd";
     status = "okay";
     cdc_acm_0: cdc_acm_uart0 {
+        current-speed = <230400>;
         compatible = "zephyr,cdc-acm-uart";
         label = "CDC_ACM_0";
     };
 };
 
+feather_adc: &adc {
+	status = "disabled";
+};
+
+feather_i2c: &i2c0 {
+    status = "disabled";
+};
+
+&pinctrl {
+	spi1_default: spi1_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 15)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 13)>,
+				<NRF_PSEL(SPIM_MISO, 1, 14)>;
+		};
+	};
+};
+
+nrf53_spi: &spi1 { /* feather SPI */
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	pinctrl-0 = <&spi1_default>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpio0 31 GPIO_ACTIVE_LOW>;
+    miso-pull-down;
+};
+
 / {
+    intput_pins {
+        compatible = "gpio-keys";
+        ads129x_drdy: ads129x_drdy {
+            gpios = <&mesh_header 17 GPIO_ACTIVE_HIGH>;
+            label = "ADS129X_DRDY_PIN";
+        };
+    };
+
+    output_pins {
+        compatible = "gpio-leds";
+        ads129x_reset: ads129x_reset {
+            gpios = <&mesh_header 18 GPIO_ACTIVE_HIGH>;
+            label = "ADS129X_RESET_PIN";
+        };
+
+        ads129x_start: ads129x_start {
+            gpios = <&mesh_header 19 GPIO_ACTIVE_HIGH>;
+            label = "ADS129X_START_PIN";
+        };
+    };
+
     chosen {
         zephyr,console = &cdc_acm_0;
         zephyr,shell-uart = &cdc_acm_0;

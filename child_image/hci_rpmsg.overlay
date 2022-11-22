@@ -1,6 +1,7 @@
 
 arduino_serial: &uart0 {
-	status = "okay";
+	//status = "okay";
+	status = "disabled";
 	compatible = "nordic,nrf-uarte";
 	current-speed = <115200>;
 	pinctrl-0 = <&uart0_default>;
@@ -8,4 +9,5 @@ arduino_serial: &uart0 {
 	pinctrl-names = "default", "sleep";
 	/delete-property/ rts-pin;
     /delete-property/ cts-pin;
+	interrupts = < 0x13 0x5 >;
 };

@@ -18,4 +18,7 @@ void main(void)
     /* init pheriferials */
     app_usb_init();
     bt_init();
+
+    uint32_t a = NRF_FICR->INFO.VARIANT;
+    LOG_INF("This board has the variant %" PRIu32, a);
 }
