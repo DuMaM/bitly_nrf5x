@@ -17,7 +17,7 @@
 #define MAX_CONN_INTERVAL 3200
 #define SUPERVISION_TIMEOUT 1000
 
-#define SHELL_TEST_RUN_PRIO 9
+#define SHELL_TEST_RUN_PRIO 8
 
 typedef struct
 {

@@ -70,6 +70,50 @@ static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
     return prog;
 }
 
+static uint32_t send_test_ecg_alt(uint32_t _bytes_to_send)
+{
+    uint32_t prog = 0;
+    uint8_t *analog_data_ptr = NULL;
+    uint32_t analog_data_size = 0;
+    int err = 0;
+
+    /*
+     * we always waiting for data to match whole buffer
+     * so data requested should also match it
+     * otherwise we should ignore it
+     */
+    uint16_t remainder = _bytes_to_send % ADS129x_DATA_BUFFER_SIZE;
+    if (remainder) {
+        _bytes_to_send = ((_bytes_to_send / ADS129x_DATA_BUFFER_SIZE) + 1) * ADS129x_DATA_BUFFER_SIZE;
+    }
+    // LOG_INF("Sending %"PRIu32" bytes (value after rounding to max packet size)", _bytes_to_send);
+
+    while (prog < _bytes_to_send)
+    {
+        analog_data_size = _bytes_to_send - prog;
+        if (test_params.data_len->tx_max_len <= analog_data_size) {
+            analog_data_size = test_params.data_len->tx_max_len;
+        }
+
+        uint32_t get_size = ads129x_write_data_continuous(&analog_data_ptr, analog_data_size);
+        if (get_size == 0) {
+            continue;
+        }
+
+        err = bt_performance_test_write(&performance_test, analog_data_ptr, get_size);
+        if (err)
+        {
+            LOG_ERR("GATT write failed (err %d)", err);
+            break;
+        }
+
+        ads129x_write_data_continuous_fin(get_size);
+
+        prog += get_size;
+    }
+    return prog;
+}
+
 static void adc_test_run()
 {
     int64_t delta;
@@ -82,7 +126,7 @@ static void adc_test_run()
     ads129x_data_enable();
     LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
-    prog = send_test_ecg_data(bytes_to_send);
+    prog = send_test_ecg_alt(bytes_to_send);
     delta = k_uptime_delta(&stamp);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
     ads129x_data_disable();

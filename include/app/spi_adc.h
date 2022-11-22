@@ -270,20 +270,20 @@ typedef union _pipe_packet_u {
 } pipe_packet_u;
 
 
-#define ADS129x_STATUS_OFFSET (1 * 3)
-#define ADS129x_V6_OFFSET (1 * 3)
-#define ADS129x_LEAD1_OFFSET (2 * 3)
-#define ADS129x_LEAD2_OFFSET (3 * 3)
-#define ADS129x_V2_OFFSET (4 * 3)
-#define ADS129x_V3_OFFSET (5 * 3)
-#define ADS129x_V4_OFFSET (6 * 3)
-#define ADS129x_V5_OFFSET (7 * 3)
-#define ADS129x_V1_OFFSET (8 * 3)
+#define ADS129x_STATUS_OFFSET   (0 * 3)
+#define ADS129x_V6_OFFSET       (1 * 3)
+#define ADS129x_LEAD1_OFFSET    (2 * 3)
+#define ADS129x_LEAD2_OFFSET    (3 * 3)
+#define ADS129x_V2_OFFSET       (4 * 3)
+#define ADS129x_V3_OFFSET       (5 * 3)
+#define ADS129x_V4_OFFSET       (6 * 3)
+#define ADS129x_V5_OFFSET       (7 * 3)
+#define ADS129x_V1_OFFSET       (8 * 3)
 
-#define ADS129x_LEAD3_OFFSET (9 * 3)
-#define ADS129x_AVR_OFFSET (10 * 3)
-#define ADS129x_AVL_OFFSET (11 * 3)
-#define ADS129x_AVF_OFFSET (12 * 3)
+#define ADS129x_LEAD3_OFFSET    (9 * 3)
+#define ADS129x_AVR_OFFSET      (10 * 3)
+#define ADS129x_AVL_OFFSET      (11 * 3)
+#define ADS129x_AVF_OFFSET      (12 * 3)
 
 typedef union _ads129x_data_packet_t
 {
@@ -292,8 +292,10 @@ typedef union _ads129x_data_packet_t
 } ads129x_data_packet_t;
 
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size);
-uint32_t ads129x_get_claim_data(uint8_t **load_data, uint32_t size);
-void ads129x_finish_data(uint8_t *load_data, uint32_t size);
+
+void ads129x_write_data_continuous_fin(uint32_t size);
+uint32_t ads129x_write_data_continuous(uint8_t **buffer, uint32_t size);
+
 int8_t ads129x_reset_data(void);
 
 void ads129x_init(void);
@@ -311,8 +313,6 @@ void ads129x_write_data(void);
 int ads129x_read_registers(uint8_t _address, uint8_t _n, uint8_t *_value);
 int ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value);
 
-void ads129x_read_data_continuous(void);
-void ads129x_write_data_continuous(void);
 void ads129x_read_data_single(void);
 void ads129x_write_data_single(void);
 
