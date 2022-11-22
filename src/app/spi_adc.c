@@ -266,6 +266,21 @@ void ads129x_reset(void)
 }
 
 /**
+ * Reset Registers to Default Values.
+ */
+void ads129x_reset_pin(void)
+{
+    LOG_DBG("CMD: Reset via pins");
+    gpio_pin_set_dt(&reset_spec, 1);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
+    gpio_pin_set_dt(&reset_spec, 0);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
+    gpio_pin_set_dt(&reset_spec, 1);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
+}
+
+
+/**
  * Start/restart (synchronize) conversions.
  */
 void ads129x_start(void)
@@ -564,12 +579,7 @@ void ads129x_setup(void)
 
     // Wait for 18 tCLKs AKA 30*18 microseconds
     ads129x_init();
-    gpio_pin_set_dt(&reset_spec, 1);
-    k_usleep(ADS_CLK_PERIOD_US * 18);
-    gpio_pin_set_dt(&reset_spec, 0);
-    k_usleep(ADS_CLK_PERIOD_US * 18);
-    gpio_pin_set_dt(&reset_spec, 1);
-    k_usleep(ADS_CLK_PERIOD_US * 18);
+    ads129x_reset_pin();
 
     // device wakes up in RDATAC mode, so send stop signal
     ads129x_sdatac();
@@ -775,7 +785,7 @@ void ads129x_read_data_continuous(void)
 
     /* add timestamp */
     uint32_t tmp_timestamp = (uint32_t)(k_uptime_get() - timestamp);
-    data = conv_u24_to_raw(&tmp_timestamp, data, 0);
+    data = conv_u24_to_raw(tmp_timestamp, data, 0);
 
     /* do processing */
     /* NOTE: Work directly on a ring buffer memory */
@@ -899,7 +909,6 @@ void ads129x_set_data()
         //ads129x_dump_data(tx_data.packet.leads._buffer);
     }
 
-    /* send data to consumers */
     /* send data to the consumers */
     k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
 }
