@@ -38,9 +38,9 @@
 #ifdef CONFIG_SPI
 
 /* size of stack area used by each thread */
-#define STACKSIZE 1024
+#define STACKSIZE 4096
 /* scheduling priority used by each thread */
-#define PRIORITY 9
+#define PRIORITY 7
 K_SEM_DEFINE(ads129x_new_data, 0, 1);
 static bool ads129x_print_data = false;
 
@@ -95,8 +95,7 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 
 // handle simple data requests
 K_MUTEX_DEFINE(ads129x_ring_buffer_mutex);
-RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE);
-K_SEM_DEFINE(ads129x_ring_buffer_rdy, 0, 1);
+RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE * 12);
 
 // ##########
 // # DRIVER
@@ -267,6 +266,21 @@ void ads129x_reset(void)
 }
 
 /**
+ * Reset Registers to Default Values.
+ */
+void ads129x_reset_pin(void)
+{
+    LOG_DBG("CMD: Reset via pins");
+    gpio_pin_set_dt(&reset_spec, 1);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
+    gpio_pin_set_dt(&reset_spec, 0);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
+    gpio_pin_set_dt(&reset_spec, 1);
+    k_usleep(ADS_CLK_PERIOD_US * 18);
+}
+
+
+/**
  * Start/restart (synchronize) conversions.
  */
 void ads129x_start(void)
@@ -339,7 +353,6 @@ void ads129x_read_data(void)
     ring_buf_put_finish(&ads129x_ring_buffer, size);
 
     k_mutex_unlock(&ads129x_ring_buffer_mutex);
-    k_sem_give(&ads129x_ring_buffer_rdy);
 }
 
 /**
@@ -566,12 +579,7 @@ void ads129x_setup(void)
 
     // Wait for 18 tCLKs AKA 30*18 microseconds
     ads129x_init();
-    gpio_pin_set_dt(&reset_spec, 1);
-    k_usleep(ADS_CLK_PERIOD_US * 18);
-    gpio_pin_set_dt(&reset_spec, 0);
-    k_usleep(ADS_CLK_PERIOD_US * 18);
-    gpio_pin_set_dt(&reset_spec, 1);
-    k_usleep(ADS_CLK_PERIOD_US * 18);
+    ads129x_reset_pin();
 
     // device wakes up in RDATAC mode, so send stop signal
     ads129x_sdatac();
@@ -748,16 +756,85 @@ int8_t ads129x_reset_data(void)
 {
     timestamp = k_uptime_get();
 
+    ring_buf_reset(&ads129x_ring_buffer);
     k_pipe_flush(&ads129x_pipe);
-    //k_sem_reset(&ads129x_ring_buffer_rdy);
     return 0;
 }
 
-void ads129x_finish_data(uint8_t *load_data, uint32_t size)
+
+/**
+ * Read data by command; supports multiple read back.
+ */
+void ads129x_read_data_continuous(void)
 {
+
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
+        return;
+    }
+
+    if (ring_buf_space_get(&ads129x_ring_buffer) < ADS129x_DATA_BUFFER_SIZE)
+    {
+        k_mutex_unlock(&ads129x_ring_buffer_mutex);
+        return;
+    }
+
+    uint8_t *data = NULL;
+
+    /* Allocate buffer within a ring buffer memory. */
+    uint16_t size = ring_buf_put_claim(&ads129x_ring_buffer, &data, ADS129x_DATA_BUFFER_SIZE);
+
+    /* add timestamp */
+    uint32_t tmp_timestamp = (uint32_t)(k_uptime_get() - timestamp);
+    data = conv_u24_to_raw(tmp_timestamp, data, 0);
+
+    /* do processing */
+    /* NOTE: Work directly on a ring buffer memory */
+    int ret = spi_read(ads129x_spi, &ads129x_spi_cfg, &ads129x_rx);
+    if (!ret)
+    {
+        /* add missing leads */
+        /* add missing leads */
+        lead1 = conv_u24_to_i32(conv_raw_to_u24(tx_data.packet.leads._buffer, ADS129x_LEAD1_OFFSET));
+        lead2 = conv_u24_to_i32(conv_raw_to_u24(tx_data.packet.leads._buffer, ADS129x_LEAD2_OFFSET));
+        conv_u24_to_raw(ads129x_get_leadIII(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_LEAD3_OFFSET);
+        conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVR_OFFSET);
+        conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVL_OFFSET);
+        conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVF_OFFSET);
+
+    }
     /* Indicate amount of valid data. rx_size can be equal or less than size. */
-    ring_buf_get_finish(&ads129x_ring_buffer, size);
-    //k_mutex_unlock(&ads129x_ring_buffer_mutex);
+    ring_buf_put_finish(&ads129x_ring_buffer, size);
+
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+}
+
+/**
+ * Read data by command; supports multiple read back.
+ */
+uint32_t ads129x_write_data_continuous(uint8_t **buffer, uint32_t size)
+{
+
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_SECONDS(60)) != 0) {
+        return 0;
+    }
+
+    if (ring_buf_size_get(&ads129x_ring_buffer) < size)
+    {
+        k_mutex_unlock(&ads129x_ring_buffer_mutex);
+        return 0;
+    }
+
+    /* Allocate buffer within a ring buffer memory. */
+    return ring_buf_get_claim(&ads129x_ring_buffer, buffer, size);
+}
+
+void ads129x_write_data_continuous_fin(uint32_t size){
+    /* do processing */
+    /* NOTE: Work directly on a ring buffer memory */
+    /* Indicate amount of valid data. rx_size can be equal or less than size. */
+    ring_buf_put_finish(&ads129x_ring_buffer, size);
+
+    k_mutex_unlock(&ads129x_ring_buffer_mutex);
 }
 
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
@@ -832,7 +909,6 @@ void ads129x_set_data()
         //ads129x_dump_data(tx_data.packet.leads._buffer);
     }
 
-    /* send data to consumers */
     /* send data to the consumers */
     k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
 }
