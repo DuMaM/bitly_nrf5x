@@ -35,7 +35,12 @@
 #include <spi_adc.h>
 #include <app_utils.h>
 
+
+
 #ifdef CONFIG_SPI
+
+// data rate
+uint16_t data_rate = 2000;
 
 /* size of stack area used by each thread */
 #define STACKSIZE 4096
@@ -588,7 +593,7 @@ void ads129x_setup(void)
      * enable 2kHz sample-rate
      * 4kHz is max which can be handle by BLE 5.2
      */
-    ads129x_set_data_rate(2000);
+    ads129x_set_data_rate(data_rate);
 
     /*
      * enable internal reference
@@ -665,9 +670,9 @@ bool ads129x_get_status()
     return ecg_status;
 }
 
-int16_t ads129x_set_data_rate(uint16_t data_rate)
+int16_t ads129x_set_data_rate(uint16_t _data_rate)
 {
-    int16_t data_rate_code = ads129x_get_reg_DR_from_speed(data_rate);
+    int16_t data_rate_code = ads129x_get_reg_DR_from_speed(_data_rate);
 
     if (data_rate_code < 0)
     {
@@ -675,7 +680,7 @@ int16_t ads129x_set_data_rate(uint16_t data_rate)
         return -EINVAL;
     }
 
-    LOG_INF("Setting data rate to: %" PRIu16, data_rate);
+    LOG_INF("Setting data rate to: %" PRIu16, _data_rate);
     uint8_t reg_val = 0;
     ads129x_read_registers(ADS129X_REG_CONFIG1, 1, &reg_val);
 
@@ -688,7 +693,13 @@ int16_t ads129x_set_data_rate(uint16_t data_rate)
     reg_val |= 1 << ADS129X_BIT_HR;
     ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
 
+
+    data_rate = _data_rate;
     return 0;
+}
+
+uint16_t ads129x_get_data_rate() {
+    return data_rate;
 }
 
 void ads129x_dump_regs()
@@ -911,6 +922,7 @@ void ads129x_set_data()
 
     /* send data to the consumers */
     k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
+    }
 }
 
 void ads129x_th(void)
