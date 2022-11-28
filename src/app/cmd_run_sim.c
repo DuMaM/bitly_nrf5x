@@ -9,6 +9,7 @@
 #include <performance_test.h>
 #include <app_utils.h>
 #include "sim_file.h"
+#include <cmd.h>
 
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
@@ -63,9 +64,9 @@ static uint32_t send_test_sim_data()
          * set max buffer value as input
          * and update index of sim data
          */
-        if ((SIM_SIZE - sim_prog) * SIM_VALUE_BYTE_SIZE > test_data_buffer_size)
+        if ((SIM_SIZE - sim_prog) * SIM_VALUE_BYTE_SIZE > test_params.data_len->tx_max_len)
         {
-            buffer_size = test_data_buffer_size;
+            buffer_size = test_params.data_len->tx_max_len;
             buffer_size -= buffer_size % SIM_VALUE_BYTE_SIZE;
         }
 
