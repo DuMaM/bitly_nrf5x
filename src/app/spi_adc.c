@@ -35,7 +35,7 @@
 #include <spi_adc.h>
 #include <app_utils.h>
 
-
+#include <cmd.h>
 
 #ifdef CONFIG_SPI
 
@@ -45,8 +45,8 @@ uint16_t data_rate = 2000;
 /* size of stack area used by each thread */
 #define STACKSIZE 4096
 /* scheduling priority used by each thread */
-#define PRIORITY 7
-K_SEM_DEFINE(ads129x_new_data, 0, 1);
+#define PRIORITY 8
+K_SEM_DEFINE(ads129x_new_data, 0, 100);
 static bool ads129x_print_data = false;
 
 LOG_MODULE_REGISTER(ads129x_log, LOG_LEVEL_INF);
@@ -741,7 +741,14 @@ void ads129x_dump_regs()
 // ###########
 
 // handle data stream
-K_PIPE_DEFINE(ads129x_pipe, ADS129X_RING_BUFFER_SIZE * 12, 4);
+/*
+ * buffer should have at least 145 times size of package
+ * to allow for storing one 35ms long connection event
+ *
+ * We dont support bigger values
+ * also 15 packages is added as protection for data overwrites
+ */
+K_PIPE_DEFINE(ads129x_pipe, ADS129x_DATA_BUFFER_SIZE * 3 * 160, 4);
 
 static pipe_packet_u tx_data;
 
@@ -779,7 +786,7 @@ int8_t ads129x_reset_data(void)
 void ads129x_read_data_continuous(void)
 {
 
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100)) != 0) {
+    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_USEC(250)) != 0) {
         return;
     }
 
@@ -870,7 +877,7 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
             min_size = size;
         }
 
-        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_SECONDS(10));
+        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_NO_WAIT);
 
         if (rc == -EINVAL)
         {
@@ -879,6 +886,17 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
         }
         else if ((rc < 0) || (bytes_read < min_size))
         {
+            /*
+            * sleep for one connection interval
+            * this will allow to buffer spi data
+            * after that we have constant data stream which
+            * can be send during connection event
+            *
+            * I added a weight in 0.9 value to start a bit earlier
+            * data feeding for connection event.
+            */
+            k_msleep(test_params.conn_param->interval_max * UNIT_SCALER * 0.5);
+
             LOG_DBG("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
             continue;
         }
@@ -918,7 +936,6 @@ void ads129x_set_data()
         conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVF_OFFSET);
 
         //ads129x_dump_data(tx_data.packet.leads._buffer);
-    }
 
     /* send data to the consumers */
     k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);

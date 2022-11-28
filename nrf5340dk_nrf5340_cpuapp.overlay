@@ -30,6 +30,10 @@
     status = "disabled";
 };
 
+mbox: &ipc {
+	interrupts = <42 3>;
+};
+
 nrf53_spi: &spi2 {
     compatible = "nordic,nrf-spim";
     status = "okay";
@@ -62,7 +66,7 @@ nrf53_spi: &spi2 {
     status = "okay";
     compatible = "nordic,nrf-uarte";
     current-speed = <115200>;
-    interrupts = <8 5>;
+    interrupts = <8 6>;
     pinctrl-0 = <&uart0_default>;
     pinctrl-1 = <&uart0_sleep>;
     pinctrl-names = "default", "sleep";
@@ -71,7 +75,7 @@ nrf53_spi: &spi2 {
 };
 
 &gpiote1 {
-    interrupts = <47 3>;
+    interrupts = <47 2>;
 };
 
 / {
@@ -108,6 +112,10 @@ nrf53_spi: &spi2 {
     };
 
     intput_pins {
+        /*
+         * GPIO interupts are defined in GPIOE
+         * it's becasue all NRFX events are redirected form this module
+         */
         compatible = "gpio-keys";
         ads129x_drdy: ads129x_drdy {
             gpios = <&arduino_header 20 GPIO_ACTIVE_HIGH>;

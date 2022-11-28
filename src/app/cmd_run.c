@@ -20,7 +20,7 @@ K_SEM_DEFINE(cmd_sync_sem, 0, 1);
 
 extern struct bt_conn *default_conn;
 /* a test_data_buffer data buffer */
-uint8_t test_data_buffer[495];
+uint8_t test_data_buffer[502];
 const uint16_t test_data_buffer_size = sizeof(test_data_buffer) / sizeof(test_data_buffer[0]);
 
 static void get_rssi_power(struct bt_conn *conn)

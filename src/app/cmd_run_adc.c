@@ -119,12 +119,6 @@ static void adc_test_run()
     int64_t delta;
     uint32_t prog = 0;
 
-    // allow to return from shell
-    k_msleep(100);
-    /* get cycle stamp */
-    LOG_INF("=== Reseting data buffer ===");
-    ads129x_data_enable();
-    LOG_INF("=== Start analog data transfer ===");
     stamp = k_uptime_get_32();
     prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
@@ -147,6 +141,10 @@ static void adc_test_run()
 
 int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
+    const struct bt_le_conn_param *conn_param = test_params.conn_param;
+    const struct bt_conn_le_phy_param *phy = test_params.phy;
+    const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
+
     if (argc == 1)
     {
         shell_help(shell);
@@ -169,9 +167,12 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
 
     LOG_DBG("Data read speed: %"PRIu32, bytes_to_send);
 
-    const struct bt_le_conn_param *conn_param = test_params.conn_param;
-    const struct bt_conn_le_phy_param *phy = test_params.phy;
-    const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
+    // allow to return from shell
+    /* get cycle stamp */
+    LOG_INF("=== Reseting data buffer ===");
+    ads129x_data_enable();
+    LOG_INF("=== Start analog data transfer ===");
+    k_usleep(100);
 
     int err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_ANALOG);
     if (err)
