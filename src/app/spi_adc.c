@@ -36,11 +36,35 @@
 #include <app_utils.h>
 
 #include <cmd.h>
+#include <performance_test.h>
+#include <bt_test.h>
 
 #ifdef CONFIG_SPI
 
 // data rate
 uint16_t data_rate = 2000;
+
+// ble send bytes
+volatile uint32_t bytes_to_send = 0;
+
+uint32_t set_bytes_to_send(uint32_t _bytes_to_send)
+{
+    /*
+     * we always waiting for data to match whole buffer
+     * so data requested should also match it
+     * otherwise we should ignore it
+     */
+    uint16_t remainder = _bytes_to_send % ADS129x_DATA_BUFFER_SIZE;
+    if (remainder)
+    {
+        bytes_to_send = ((_bytes_to_send / ADS129x_DATA_BUFFER_SIZE) + 1) * ADS129x_DATA_BUFFER_SIZE;
+    }
+    else
+    {
+        bytes_to_send = _bytes_to_send;
+    }
+    return bytes_to_send;
+}
 
 /* size of stack area used by each thread */
 #define STACKSIZE 4096
@@ -99,8 +123,13 @@ struct gpio_dt_spec drdy_spec = GPIO_DT_SPEC_GET_OR(DRDY_NODE, gpios, {0});
 #define ADS129X_RING_BUFFER_SIZE (ADS129X_RING_BUFFER_PACKET * ADS129x_DATA_BUFFER_SIZE * 3)
 
 // handle simple data requests
-K_MUTEX_DEFINE(ads129x_ring_buffer_mutex);
+K_SEM_DEFINE(ads129x_ring_buffer_sem, 1, 1);
 RING_BUF_DECLARE(ads129x_ring_buffer, ADS129X_RING_BUFFER_SIZE * 12);
+
+int wait_for_finish()
+{
+    return k_sem_take(&ads129x_ring_buffer_sem, K_FOREVER);
+}
 
 // ##########
 // # DRIVER
@@ -284,7 +313,6 @@ void ads129x_reset_pin(void)
     k_usleep(ADS_CLK_PERIOD_US * 18);
 }
 
-
 /**
  * Start/restart (synchronize) conversions.
  */
@@ -325,6 +353,7 @@ void ads129x_sdatac(void)
 
 /**
  * Read data by command; supports multiple read back.
+ * This command assumes that continuous read is disabled
  */
 void ads129x_read_data(void)
 {
@@ -336,7 +365,6 @@ void ads129x_read_data(void)
     }
 
     uint8_t *data = NULL;
-    k_mutex_lock(&ads129x_ring_buffer_mutex, K_MSEC(100));
 
     /* Allocate buffer within a ring buffer memory. */
     uint16_t size = ring_buf_put_claim(&ads129x_ring_buffer, &data, ADS129x_DATA_BUFFER_SIZE);
@@ -356,8 +384,6 @@ void ads129x_read_data(void)
     }
     /* Indicate amount of valid data. rx_size can be equal or less than size. */
     ring_buf_put_finish(&ads129x_ring_buffer, size);
-
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
 }
 
 /**
@@ -693,12 +719,12 @@ int16_t ads129x_set_data_rate(uint16_t _data_rate)
     reg_val |= 1 << ADS129X_BIT_HR;
     ads129x_safe_write_register(ADS129X_REG_CONFIG1, reg_val);
 
-
     data_rate = _data_rate;
     return 0;
 }
 
-uint16_t ads129x_get_data_rate() {
+uint16_t ads129x_get_data_rate()
+{
     return data_rate;
 }
 
@@ -759,14 +785,9 @@ static pipe_packet_u tx_data;
 static struct spi_buf ads129x_rx_bufs[] = {{.buf = tx_data.packet.leads._buffer, .len = ADS129X_SPI_PACKAGE_SIZE}};
 static struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
 
-/* track status of buffers */
-static size_t total_size = ADS129x_DATA_BUFFER_SIZE;
-static size_t bytes_written = 0;
-
 /* tmp vars*/
 static int32_t lead1 = 0;
 static int32_t lead2 = 0;
-
 
 int64_t timestamp = 0;
 
@@ -779,20 +800,13 @@ int8_t ads129x_reset_data(void)
     return 0;
 }
 
-
 /**
  * Read data by command; supports multiple read back.
  */
 void ads129x_read_data_continuous(void)
 {
-
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_USEC(250)) != 0) {
-        return;
-    }
-
     if (ring_buf_space_get(&ads129x_ring_buffer) < ADS129x_DATA_BUFFER_SIZE)
     {
-        k_mutex_unlock(&ads129x_ring_buffer_mutex);
         return;
     }
 
@@ -818,12 +832,9 @@ void ads129x_read_data_continuous(void)
         conv_u24_to_raw(ads129x_get_aVR(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVR_OFFSET);
         conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVL_OFFSET);
         conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVF_OFFSET);
-
     }
     /* Indicate amount of valid data. rx_size can be equal or less than size. */
     ring_buf_put_finish(&ads129x_ring_buffer, size);
-
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
 }
 
 /**
@@ -831,14 +842,8 @@ void ads129x_read_data_continuous(void)
  */
 uint32_t ads129x_write_data_continuous(uint8_t **buffer, uint32_t size)
 {
-
-    if (k_mutex_lock(&ads129x_ring_buffer_mutex, K_SECONDS(60)) != 0) {
-        return 0;
-    }
-
     if (ring_buf_size_get(&ads129x_ring_buffer) < size)
     {
-        k_mutex_unlock(&ads129x_ring_buffer_mutex);
         return 0;
     }
 
@@ -846,13 +851,47 @@ uint32_t ads129x_write_data_continuous(uint8_t **buffer, uint32_t size)
     return ring_buf_get_claim(&ads129x_ring_buffer, buffer, size);
 }
 
-void ads129x_write_data_continuous_fin(uint32_t size){
+void ads129x_write_data_continuous_fin(uint32_t size)
+{
     /* do processing */
     /* NOTE: Work directly on a ring buffer memory */
     /* Indicate amount of valid data. rx_size can be equal or less than size. */
-    ring_buf_put_finish(&ads129x_ring_buffer, size);
+    ring_buf_get_finish(&ads129x_ring_buffer, size);
+}
 
-    k_mutex_unlock(&ads129x_ring_buffer_mutex);
+static uint32_t send_test_ecg_alt(uint32_t _bytes_to_send)
+{
+    uint8_t *analog_data_ptr = NULL;
+    uint32_t analog_data_size = 0;
+    uint32_t get_size = 0;
+    int err = 0;
+
+    // LOG_INF("Sending %"PRIu32" bytes (value after rounding to max packet size)", _bytes_to_send);
+
+    if (_bytes_to_send)
+    {
+        analog_data_size = _bytes_to_send;
+        if (test_params.data_len->tx_max_len - 4 <= analog_data_size)
+        {
+            analog_data_size = test_params.data_len->tx_max_len - 4;
+        }
+
+        get_size = ads129x_write_data_continuous(&analog_data_ptr, analog_data_size);
+        if (get_size < analog_data_size)
+        {
+            return 0;
+        }
+
+        err = bt_performance_test_write(&performance_test, analog_data_ptr, get_size);
+        if (err)
+        {
+            LOG_ERR("GATT write failed (err %d)", err);
+            return 0;
+        }
+
+        ads129x_write_data_continuous_fin(get_size);
+    }
+    return get_size;
 }
 
 uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
@@ -887,14 +926,14 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
         else if ((rc < 0) || (bytes_read < min_size))
         {
             /*
-            * sleep for one connection interval
-            * this will allow to buffer spi data
-            * after that we have constant data stream which
-            * can be send during connection event
-            *
-            * I added a weight in 0.9 value to start a bit earlier
-            * data feeding for connection event.
-            */
+             * sleep for one connection interval
+             * this will allow to buffer spi data
+             * after that we have constant data stream which
+             * can be send during connection event
+             *
+             * I added a weight in 0.9 value to start a bit earlier
+             * data feeding for connection event.
+             */
             k_msleep(test_params.conn_param->interval_max * UNIT_SCALER * 0.5);
 
             LOG_DBG("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
@@ -918,6 +957,9 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
 
 void ads129x_set_data()
 {
+    /* track status of buffers */
+    static size_t bytes_written = 0;
+
     /* add timestamp */
     tx_data.packet.timestamp = k_uptime_get() - timestamp;
     conv_u24_to_raw(tx_data.packet.timestamp, tx_data.buffer, 0);
@@ -935,10 +977,10 @@ void ads129x_set_data()
         conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVL_OFFSET);
         conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), tx_data.packet.leads._buffer, ADS129x_AVF_OFFSET);
 
-        //ads129x_dump_data(tx_data.packet.leads._buffer);
+        // ads129x_dump_data(tx_data.packet.leads._buffer);
 
-    /* send data to the consumers */
-    k_pipe_put(&ads129x_pipe, &tx_data.buffer, total_size, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
+        /* send data to the consumers */
+        k_pipe_put(&ads129x_pipe, &tx_data.buffer, ADS129x_DATA_BUFFER_SIZE, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
     }
 }
 
@@ -956,7 +998,27 @@ void ads129x_th(void)
          */
         if (k_sem_take(&ads129x_new_data, K_FOREVER) == 0)
         {
-            ads129x_set_data();
+
+            /*
+             * get new data to spi
+             */
+            ads129x_read_data_continuous();
+
+            /*
+             * new data arrival is best place
+             * to send them over ble
+             * mostly because there is still a lot of interval between next call
+             */
+            if (bytes_to_send > 0)
+            {
+                bytes_to_send -= send_test_ecg_alt(bytes_to_send);
+
+                // todo: rise semaphore
+                if (bytes_to_send == 0)
+                {
+                    k_sem_give(&ads129x_ring_buffer_sem);
+                }
+            }
         }
     }
 }

@@ -330,4 +330,10 @@ uint16_t ads129x_get_data_rate();
 
 void ads129x_dump_regs();
 
+
+
+
+uint32_t set_bytes_to_send(uint32_t _bytes_to_send);
+int wait_for_finish();
+
 #endif

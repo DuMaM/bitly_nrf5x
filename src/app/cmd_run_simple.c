@@ -8,6 +8,7 @@
 #include <zephyr/kernel.h>
 
 #include <performance_test.h>
+#include <bt_test.h>
 #include "img_file.h"
 
 extern uint8_t test_data_buffer[];
