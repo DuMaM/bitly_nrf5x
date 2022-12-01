@@ -132,7 +132,7 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     LOG_INF("=== Reseting data buffer ===");
     ads129x_data_enable();
     LOG_INF("=== Start analog data transfer ===");
-    k_usleep(100);
+    k_usleep(500);
 
     int err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_ANALOG);
     if (err)

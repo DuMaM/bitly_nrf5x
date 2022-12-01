@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <kernel.h>
+#include <zephyr/kernel.h>
 #include <string.h>
 #include <zephyr/types.h>
 
@@ -16,7 +16,7 @@
 
 #include <performance_test.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 
