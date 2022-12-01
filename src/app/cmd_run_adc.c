@@ -79,7 +79,7 @@ static void adc_test_run()
     bytes_to_send = set_bytes_to_send(bytes_to_send);
 
     stamp = k_uptime_get_32();
-    wait_for_finish();
+    //wait_for_finish();
     delta = k_uptime_delta(&stamp);
 
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));

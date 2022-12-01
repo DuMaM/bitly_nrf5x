@@ -72,6 +72,9 @@ extern "C"
          * @param[in] met Performance test metrics.
          */
         void (*data_send)(const bt_performance_test_metrics_t* met);
+
+
+        bt_gatt_complete_func_t func;
     };
 
     typedef enum

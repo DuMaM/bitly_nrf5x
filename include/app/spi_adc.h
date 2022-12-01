@@ -20,6 +20,12 @@
 #ifndef ____ADS129X__
 #define ____ADS129X__
 
+#include <zephyr/types.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <zephyr/drivers/spi.h>
+
 // SPI Command Definition Byte Assignments (Datasheet, pg. 35)
 #define ADS129X_CMD_WAKEUP 0x02  // Wake-up from standby mode
 #define ADS129X_CMD_STANDBY 0x04 // Enter Standby mode
@@ -235,7 +241,7 @@
 #define ADS129X_DATA_NUM (ADS129X_SPI_DATA_PACKAGES_NUM + ADS129X_SPI_STATUS_WORD_NUM + ADS129X_AUGMENTED_LEAD_NUM + ADS129x_TIMESTAMP_NUM)
 #define ADS129x_DATA_BUFFER_SIZE (ADS129X_DATA_NUM * 3)
 
-typedef struct  __attribute__((__packed__)) _packet_12lead_struct
+typedef struct __attribute__((__packed__)) _packet_12lead_struct
 {
     uint32_t status : 24;
     uint32_t v6_c6 : 24;
@@ -254,36 +260,38 @@ typedef struct  __attribute__((__packed__)) _packet_12lead_struct
 
 } packet_12lead_t;
 
-typedef union _packet_12lead_u {
+typedef union _packet_12lead_u
+{
     packet_12lead_t _leads;
     uint8_t _buffer[sizeof(packet_12lead_t)];
 } packet_12lead_u;
 
-typedef struct  __attribute__((__packed__)) _pipe_packet {
-    uint32_t timestamp: 24;
+typedef struct __attribute__((__packed__)) _pipe_packet
+{
+    uint32_t timestamp : 24;
     packet_12lead_u leads;
 } pipe_packet_t;
 
-typedef union _pipe_packet_u {
+typedef union _pipe_packet_u
+{
     pipe_packet_t packet;
     uint8_t buffer[sizeof(pipe_packet_t)];
 } pipe_packet_u;
 
+#define ADS129x_STATUS_OFFSET (0 * 3)
+#define ADS129x_V6_OFFSET (1 * 3)
+#define ADS129x_LEAD1_OFFSET (2 * 3)
+#define ADS129x_LEAD2_OFFSET (3 * 3)
+#define ADS129x_V2_OFFSET (4 * 3)
+#define ADS129x_V3_OFFSET (5 * 3)
+#define ADS129x_V4_OFFSET (6 * 3)
+#define ADS129x_V5_OFFSET (7 * 3)
+#define ADS129x_V1_OFFSET (8 * 3)
 
-#define ADS129x_STATUS_OFFSET   (0 * 3)
-#define ADS129x_V6_OFFSET       (1 * 3)
-#define ADS129x_LEAD1_OFFSET    (2 * 3)
-#define ADS129x_LEAD2_OFFSET    (3 * 3)
-#define ADS129x_V2_OFFSET       (4 * 3)
-#define ADS129x_V3_OFFSET       (5 * 3)
-#define ADS129x_V4_OFFSET       (6 * 3)
-#define ADS129x_V5_OFFSET       (7 * 3)
-#define ADS129x_V1_OFFSET       (8 * 3)
-
-#define ADS129x_LEAD3_OFFSET    (9 * 3)
-#define ADS129x_AVR_OFFSET      (10 * 3)
-#define ADS129x_AVL_OFFSET      (11 * 3)
-#define ADS129x_AVF_OFFSET      (12 * 3)
+#define ADS129x_LEAD3_OFFSET (9 * 3)
+#define ADS129x_AVR_OFFSET (10 * 3)
+#define ADS129x_AVL_OFFSET (11 * 3)
+#define ADS129x_AVF_OFFSET (12 * 3)
 
 typedef union _ads129x_data_packet_t
 {
@@ -291,12 +299,7 @@ typedef union _ads129x_data_packet_t
     packet_12lead_t packet_12lead;
 } ads129x_data_packet_t;
 
-uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size);
-
-void ads129x_write_data_continuous_fin(uint32_t size);
-uint32_t ads129x_write_data_continuous(uint8_t **buffer, uint32_t size);
-
-int8_t ads129x_reset_data(void);
+int ads129x_access(const struct device *_spi, struct spi_config *_spi_cfg, uint8_t _cmd, uint8_t *_data, uint8_t _len);
 
 void ads129x_init(void);
 void ads129x_wakeup(void);
@@ -313,13 +316,18 @@ void ads129x_write_data(void);
 int ads129x_read_registers(uint8_t _address, uint8_t _n, uint8_t *_value);
 int ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value);
 
+
+// ringbuff
+uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size);
+void ads129x_write_data_continuous_fin(uint32_t size);
+uint32_t ads129x_write_data_continuous(uint8_t **buffer, uint32_t size);
+
 void ads129x_read_data_single(void);
 void ads129x_write_data_single(void);
 
 uint8_t ads129x_get_device_id();
 void ads129x_setup();
 void ads129x_print(bool _print);
-
 
 int16_t ads129x_get_reg_DR_from_speed(uint16_t speed);
 void ads129x_data_enable();
@@ -329,11 +337,31 @@ int16_t ads129x_set_data_rate(uint16_t data_rate);
 uint16_t ads129x_get_data_rate();
 
 void ads129x_dump_regs();
+int8_t ads129x_reset_data(void);
 
-
-
+void ads129x_load_augmented_leads(uint8_t *buffer);
+uint8_t* ads129x_write_timestamp(uint8_t* data);
 
 uint32_t set_bytes_to_send(uint32_t _bytes_to_send);
 int wait_for_finish();
 
+typedef struct _ads129x_config
+{
+    int64_t timestamp;
+    uint32_t bytes_to_send;
+    uint16_t data_rate;
+    bool print_data;
+
+    const struct device *ads129x_spi;
+    struct spi_config ads129x_spi_cfg;
+} ads129x_config_t;
+
+extern ads129x_config_t ads129x_config;
+
+/* size of stack area used by each thread */
+#define ADS129X_STACKSIZE 4096
+/* scheduling priority used by each thread */
+#define ADS129X_PRIORITY 8
+
+extern struct k_sem ads129x_new_data;
 #endif
