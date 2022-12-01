@@ -859,6 +859,25 @@ void ads129x_write_data_continuous_fin(uint32_t size)
     ring_buf_get_finish(&ads129x_ring_buffer, size);
 }
 
+uint32_t get_ready_data(uint32_t _bytes_to_send)
+{
+    uint32_t analog_data_size = _bytes_to_send;
+    if (test_params.data_len->tx_max_len - 4 <= analog_data_size)
+    {
+        analog_data_size = test_params.data_len->tx_max_len - 4;
+    }
+
+    uint32_t buffer_size = ring_buf_size_get(&ads129x_ring_buffer);
+    if (buffer_size >= analog_data_size)
+    {
+        return analog_data_size;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 static uint32_t send_test_ecg_alt(uint32_t _bytes_to_send)
 {
     uint8_t *analog_data_ptr = NULL;
@@ -986,24 +1005,18 @@ void ads129x_set_data()
 
 void ads129x_th(void)
 {
+    uint32_t data_size_drdy = 0;
+
     /* setup ecg */
     ads129x_setup();
 
     for (;;)
     {
-        /*
-         * Wait for semaphore from ISR; if acquired, do related work, then
-         * go to next loop iteration (the semaphore might have been given
-         * again); else, make the CPU idle.
-         */
-        if (k_sem_take(&ads129x_new_data, K_FOREVER) == 0)
+
+        data_size_drdy = get_ready_data(bytes_to_send);
+
+        if ((!k_sem_count_get(&ads129x_new_data)) && (data_size_drdy))
         {
-
-            /*
-             * get new data to spi
-             */
-            ads129x_read_data_continuous();
-
             /*
              * new data arrival is best place
              * to send them over ble
@@ -1019,6 +1032,20 @@ void ads129x_th(void)
                     k_sem_give(&ads129x_ring_buffer_sem);
                 }
             }
+        }
+
+        /*
+         * Wait for semaphore from ISR; if acquired, do related work, then
+         * go to next loop iteration (the semaphore might have been given
+         * again); else, make the CPU idle.
+         */
+        else if (k_sem_take(&ads129x_new_data, K_FOREVER) == 0)
+        {
+
+            /*
+             * get new data to spi
+             */
+            ads129x_read_data_continuous();
         }
     }
 }
