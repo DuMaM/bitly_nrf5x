@@ -13,8 +13,6 @@
 #include <stddef.h>
 
 // todo fix this
-#include <performance_test.h>
-#include <bt_test.h>
 #include <cmd.h>
 #include <cmd_run.h>
 
@@ -48,10 +46,10 @@ int8_t ads129x_reset_data(void)
     return 0;
 }
 
-uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
+int32_t ads129x_get_data(uint8_t *load_data, int32_t size)
 {
     int rc = 0;
-    uint32_t total = size;
+    int32_t total = size;
     size_t bytes_read;
     size_t min_size = sizeof(pipe_packet_u);
 
@@ -70,28 +68,18 @@ uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size)
             min_size = size;
         }
 
-        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_NO_WAIT);
+        rc = k_pipe_get(&ads129x_pipe, load_data, size, &bytes_read, min_size, K_USEC(250));
 
         if (rc == -EINVAL)
         {
             LOG_ERR("Bad input data: size=%d, min_size=%d, read=%d", size, min_size, bytes_read);
-            break;
+            return -1;
         }
         else if ((rc < 0) || (bytes_read < min_size))
         {
-            /*
-             * sleep for one connection interval
-             * this will allow to buffer spi data
-             * after that we have constant data stream which
-             * can be send during connection event
-             *
-             * I added a weight in 0.9 value to start a bit earlier
-             * data feeding for connection event.
-             */
-            k_msleep(test_params.conn_param->interval_max * UNIT_SCALER * 0.5);
-
             LOG_DBG("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
-            continue;
+            size -= bytes_read;
+            load_data += bytes_read;
         }
         else if (bytes_read < size)
         {
@@ -124,8 +112,6 @@ void ads129x_set_data()
     {
         /* add missing leads */
         ads129x_load_augmented_leads(tx_data.packet.leads._buffer);
-
-        // ads129x_dump_data(tx_data.packet.leads._buffer);
 
         /* send data to the consumers */
         k_pipe_put(&ads129x_pipe, &tx_data.buffer, ADS129x_DATA_BUFFER_SIZE, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
