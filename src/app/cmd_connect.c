@@ -11,11 +11,11 @@ static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv
     shell_print(shell, "\nSlave role.\n");
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&connect_thread, connect_stack,
-                                    K_THREAD_STACK_SIZEOF(connect_stack),
-                                    adv_start,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+    k_thread_create(&connect_thread, connect_stack,
+                    K_THREAD_STACK_SIZEOF(connect_stack),
+                    adv_start,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -26,11 +26,11 @@ static int set_role_to_master(const struct shell *shell, size_t argc, char **arg
     restore_state();
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&connect_thread, connect_stack,
-                                    K_THREAD_STACK_SIZEOF(connect_stack),
-                                    scan_start,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+    k_thread_create(&connect_thread, connect_stack,
+                    K_THREAD_STACK_SIZEOF(connect_stack),
+                    scan_start,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }

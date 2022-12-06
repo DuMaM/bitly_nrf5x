@@ -8,6 +8,7 @@
 #include <zephyr/kernel.h>
 
 #include <performance_test.h>
+#include <bt_test.h>
 #include "img_file.h"
 
 extern uint8_t test_data_buffer[];
@@ -87,7 +88,7 @@ int test_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     /* initialize work item for test */
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&simple_thread, simple_stack,
+    k_thread_create(&simple_thread, simple_stack,
                                     K_THREAD_STACK_SIZEOF(simple_stack),
                                     simple_test_run,
                                     NULL, NULL, NULL,

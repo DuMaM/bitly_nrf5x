@@ -6,5 +6,16 @@
 
 rsource "src/app_services/Kconfig.performance_test"
 
+config ADS129x_RINGBUFF
+    bool "Enable ringbuff"
+    help
+     Enable ringbuff.
+
+
+config ADS129x_PIPE
+    bool "Enable pipe"
+    help
+     Enable ringbuff.
+
 
 source "Kconfig.zephyr"

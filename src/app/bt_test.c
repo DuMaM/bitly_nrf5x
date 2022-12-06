@@ -41,7 +41,7 @@ static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTE
 static volatile bool bt_test_req_data_len = false;
 
 struct bt_performance_test performance_test;
-extern const struct bt_performance_test_cb performance_test_cb;
+extern struct bt_performance_test_cb performance_test_cb;
 
 struct bt_conn *getSettings(void)
 {
@@ -536,11 +536,4 @@ void bt_init(void)
     LOG_INF("Bluetooth initialized");
 
     scan_init();
-
-    err = bt_performance_test_init(&performance_test, &performance_test_cb);
-    if (err)
-    {
-        LOG_ERR("Performance test service initialization failed.");
-        return;
-    }
 }

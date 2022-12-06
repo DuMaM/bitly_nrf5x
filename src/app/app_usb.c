@@ -1,16 +1,3 @@
-/**
- * @file
- * @brief Sample echo app for CDC ACM class
- *
- * Sample app for USB CDC ACM class driver. The received data is echoed back
- * to the serial port.
- */
-
-#include <device.h>
-#include <zephyr.h>
-
-#include <usb/usb_device.h>
-
 /*
  * Copyright (c) 2019 Intel Corporation
  *
@@ -28,15 +15,15 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/logging/log.h>
 
 #include <nrfx.h>
 #include <app_usb.h>
 
-#include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(main);
 

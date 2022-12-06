@@ -30,7 +30,7 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+    k_thread_create(&config_thread, config_stack,
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
@@ -48,7 +48,7 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+    k_thread_create(&config_thread, config_stack,
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
@@ -67,7 +67,7 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "PHY set to: %s", phy_str(test_params.phy));
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+    k_thread_create(&config_thread, config_stack,
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
@@ -91,7 +91,7 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
                 phy_str(test_params.phy));
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+    k_thread_create(&config_thread, config_stack,
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_phy,
                                     NULL, NULL, NULL,
@@ -136,7 +136,7 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "LE Data Packet Length set to: %d", data_len);
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+    k_thread_create(&config_thread, config_stack,
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_len,
                                     NULL, NULL, NULL,
@@ -175,7 +175,7 @@ static int cmd_data_timing(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "LE Data Packet Time set to: %d", data_time);
 
     /* initialize work item for test */
-    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+    k_thread_create(&config_thread, config_stack,
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_len,
                                     NULL, NULL, NULL,
@@ -220,7 +220,7 @@ static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv
 
     shell_print(shell, "Connection interval set to: %d", interval);
 
-    k_tid_t my_tid = k_thread_create(&config_thread, config_stack,
+    k_thread_create(&config_thread, config_stack,
                                     K_THREAD_STACK_SIZEOF(config_stack),
                                     config_update_param,
                                     NULL, NULL, NULL,

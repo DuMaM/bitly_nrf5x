@@ -51,6 +51,7 @@ static uint32_t send_test_sim_data()
     uint16_t buffer_size = 0;
     uint32_t sim_written = 0;
     int err = 0;
+    uint32_t data_stamp = 0;
 
     /*
      * treat data as one block of memory thanks to [] operator
@@ -80,7 +81,14 @@ static uint32_t send_test_sim_data()
         {
             if (!(sim_prog % SIM_Y) && !sim_skip_timestamp) {
                 /* add timestamp before every record */
-                uint32_t data_stamp = k_uptime_get_32() - stamp;
+                //uint32_t tmp_data_stamp = (k_cycle_get_32() *  1000000)/ CONFIG_SYS_CLOCK_TICKS_PER_SEC - stamp;
+                uint32_t tmp_data_stamp = k_uptime_get_32() - stamp;
+
+                if (tmp_data_stamp == data_stamp) {
+                    tmp_data_stamp++;
+                }
+                data_stamp = tmp_data_stamp;
+
                 sim_written += write_data_to_buffer(test_data_buffer + i, &data_stamp);
 
                 /* record new value in buffer */

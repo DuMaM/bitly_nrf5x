@@ -1,8 +1,8 @@
-#include <cmd.h>
-#include <spi_adc.h>
 #include <zephyr/logging/log.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cmd.h>
+#include <spi_adc.h>
 
 #ifdef CONFIG_SPI
 LOG_MODULE_DECLARE(main);

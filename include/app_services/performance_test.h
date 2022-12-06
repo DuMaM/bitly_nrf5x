@@ -72,6 +72,9 @@ extern "C"
          * @param[in] met Performance test metrics.
          */
         void (*data_send)(const bt_performance_test_metrics_t* met);
+
+
+        bt_gatt_complete_func_t package_sent;
     };
 
     typedef enum
@@ -149,7 +152,7 @@ extern "C"
      *  @retval 0 If the operation was successful.
      *            Otherwise, a negative error code is returned.
      */
-    int bt_performance_test_init(struct bt_performance_test* performance_test, const struct bt_performance_test_cb* cb);
+    int bt_performance_test_init(struct bt_performance_test* performance_test, struct bt_performance_test_cb* cb);
 
     /** @brief Assign handles to the Performance test Service instance.
      *

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <kernel.h>
+#include <zephyr/kernel.h>
 #include <string.h>
 #include <zephyr/types.h>
 
@@ -16,7 +16,7 @@
 
 #include <performance_test.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 
@@ -154,7 +154,7 @@ BT_GATT_SERVICE_DEFINE(performance_test_svc,
                        BT_GATT_DESCRIPTOR(BT_UUID_PERF_TEST_DES, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, descriptor_write_callback, &test_type), );
 
 // code to communicate with service to get metrics
-int bt_performance_test_init(struct bt_performance_test *performance_test, const struct bt_performance_test_cb *cb)
+int bt_performance_test_init(struct bt_performance_test *performance_test, struct bt_performance_test_cb *cb)
 {
     if (!performance_test || !cb)
     {
@@ -237,9 +237,10 @@ int bt_performance_test_read(struct bt_performance_test *performance_test)
 int bt_performance_test_write(struct bt_performance_test *performance_test,
                               const uint8_t *data, uint16_t len)
 {
-    return bt_gatt_write_without_response(performance_test->conn,
-                                          performance_test->char_handle,
-                                          data, len, false);
+    return bt_gatt_write_without_response_cb(performance_test->conn,
+                                             performance_test->char_handle,
+                                             data, len, false,
+                                             callbacks->package_sent, NULL);
 }
 
 // master -> slave
