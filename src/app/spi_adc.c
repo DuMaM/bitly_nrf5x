@@ -720,7 +720,14 @@ void ads129x_load_augmented_leads(uint8_t *buffer)
 }
 
 uint8_t* ads129x_write_timestamp(uint8_t* data) {
+    static uint32_t local_timestamp = 0;
     uint32_t tmp_timestamp = (uint32_t)(k_uptime_get() - ads129x_config.timestamp);
+    //uint32_t tmp_timestamp = (uint32_t)((k_cycle_get_32() *  1000000)/ CONFIG_SYS_CLOCK_TICKS_PER_SEC - ads129x_config.timestamp);
+    if (local_timestamp == tmp_timestamp) {
+        tmp_timestamp++;
+    }
+
+    local_timestamp = tmp_timestamp;
     return conv_u24_to_raw(tmp_timestamp, data, 0);
 }
 

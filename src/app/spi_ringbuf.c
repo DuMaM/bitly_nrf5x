@@ -176,9 +176,9 @@ static uint32_t send_test_ecg_alt(uint32_t _bytes_to_send)
     if (_bytes_to_send)
     {
         analog_data_size = _bytes_to_send;
-        if (test_params.data_len->tx_max_len - 4 <= analog_data_size)
+        if (test_params.data_len->tx_max_len - 7 <= analog_data_size)
         {
-            analog_data_size = test_params.data_len->tx_max_len - 4;
+            analog_data_size = test_params.data_len->tx_max_len - 7;
         }
 
         get_size = ads129x_write_data_continuous(&analog_data_ptr, analog_data_size);

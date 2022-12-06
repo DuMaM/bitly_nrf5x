@@ -318,7 +318,7 @@ int ads129x_write_registers(uint8_t _address, uint8_t _n, uint8_t *_value);
 
 
 // ringbuff
-uint32_t ads129x_get_data(uint8_t *load_data, uint32_t size);
+int32_t ads129x_get_data(uint8_t *load_data, int32_t size);
 void ads129x_write_data_continuous_fin(uint32_t size);
 uint32_t ads129x_write_data_continuous(uint8_t **buffer, uint32_t size);
 

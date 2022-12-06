@@ -113,6 +113,7 @@ void ads129x_set_data()
         /* add missing leads */
         ads129x_load_augmented_leads(tx_data.packet.leads._buffer);
 
+        ads129x_dump_data(tx_data.packet.leads._buffer);
         /* send data to the consumers */
         k_pipe_put(&ads129x_pipe, &tx_data.buffer, ADS129x_DATA_BUFFER_SIZE, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
     }
