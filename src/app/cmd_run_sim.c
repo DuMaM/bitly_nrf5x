@@ -15,10 +15,7 @@
 LOG_MODULE_DECLARE(main);
 
 K_THREAD_STACK_DEFINE(sim_stack, 4096);
-struct k_thread sim_thread;
-
-K_THREAD_STACK_DEFINE(sim_stack, 4096);
-struct k_thread sim_thread_ble;
+static struct k_thread sim_thread;
 
 RING_BUF_DECLARE(sim_ring_buffer, 247*4);
 static uint32_t bytes_to_send = 0;
