@@ -65,9 +65,9 @@ static uint32_t send_test_sim_data()
          * set max buffer value as input
          * and update index of sim data
          */
-        if ((SIM_SIZE - sim_prog) * SIM_VALUE_BYTE_SIZE > test_params.data_len->tx_max_len)
+        if ((SIM_SIZE - sim_prog) * SIM_VALUE_BYTE_SIZE > test_params.data_len->tx_max_len - 7)
         {
-            buffer_size = test_params.data_len->tx_max_len;
+            buffer_size = test_params.data_len->tx_max_len - 7;
             buffer_size -= buffer_size % SIM_VALUE_BYTE_SIZE;
         }
 
@@ -81,15 +81,7 @@ static uint32_t send_test_sim_data()
         {
             if (!(sim_prog % SIM_Y) && !sim_skip_timestamp) {
                 /* add timestamp before every record */
-                //uint32_t tmp_data_stamp = (k_cycle_get_32() *  1000000)/ CONFIG_SYS_CLOCK_TICKS_PER_SEC - stamp;
-                uint32_t tmp_data_stamp = k_uptime_get_32() - stamp;
-
-                if (tmp_data_stamp == data_stamp) {
-                    tmp_data_stamp++;
-                }
-                data_stamp = tmp_data_stamp;
-
-                sim_written += write_data_to_buffer(test_data_buffer + i, &data_stamp);
+                sim_written += utils_write_timestamp(test_data_buffer + i);
 
                 /* record new value in buffer */
                 i = i + SIM_VALUE_BYTE_SIZE;

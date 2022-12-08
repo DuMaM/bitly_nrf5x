@@ -18,7 +18,7 @@
 
 #include <spi_adc.h>
 
-LOG_MODULE_DECLARE(ads129x_log);
+LOG_MODULE_DECLARE(ecg);
 
 // handle data stream
 /*
@@ -40,8 +40,7 @@ static struct spi_buf_set ads129x_rx = {.buffers = ads129x_rx_bufs, .count = 1};
 
 int8_t ads129x_reset_data(void)
 {
-    ads129x_config.timestamp = k_uptime_get();
-
+    utils_reset_timestamp();
     k_pipe_flush(&ads129x_pipe);
     return 0;
 }
@@ -78,8 +77,8 @@ int32_t ads129x_get_data(uint8_t *load_data, int32_t size)
         else if ((rc < 0) || (bytes_read < min_size))
         {
             LOG_DBG("Waiting period timed out; between zero and min_xfer minus one data bytes were read. %d", rc);
-            size -= bytes_read;
-            load_data += bytes_read;
+            // size -= bytes_read;
+            // load_data += bytes_read;
         }
         else if (bytes_read < size)
         {
@@ -103,7 +102,7 @@ void ads129x_set_data()
     static size_t bytes_written = 0;
 
     /* add timestamp */
-    ads129x_write_timestamp(tx_data.buffer);
+    utils_write_timestamp(tx_data.buffer);
 
     /* do processing */
     /* NOTE: Work directly on a ring buffer memory */

@@ -102,7 +102,9 @@ static void adc_test_run()
     prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
 
+    ads129x_print(false);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
+
     /* read back char from peer */
     int err = bt_performance_test_read(&performance_test);
     if (err)
@@ -154,6 +156,7 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     /* get cycle stamp */
     LOG_INF("=== Reseting data buffer ===");
     ads129x_data_enable();
+    ads129x_print(true);
     LOG_INF("=== Start analog data transfer ===");
     k_usleep(500);
 

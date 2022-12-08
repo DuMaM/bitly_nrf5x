@@ -38,7 +38,7 @@ nrf53_spi: &spi2 {
     compatible = "nordic,nrf-spim";
     status = "okay";
     cs-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
-    interrupts = <11 4>;
+    interrupts = <11 5>;
     pinctrl-0 = <&spi2_default_alt>;
     pinctrl-names = "default";
     miso-pull-down;
@@ -61,12 +61,12 @@ nrf53_spi: &spi2 {
     status = "disabled";
 };
 
-
+// https://devzone.nordicsemi.com/f/nordic-q-a/84204/framing-error-and-noisy-data-when-using-uarte-at-high-baud-rate/350747
 &uart0 {
     status = "okay";
     compatible = "nordic,nrf-uarte";
-    current-speed = <115200>;
-    interrupts = <8 6>;
+    current-speed = <1000000>;
+    interrupts = <8 4>;
     pinctrl-0 = <&uart0_default>;
     pinctrl-1 = <&uart0_sleep>;
     pinctrl-names = "default", "sleep";
@@ -158,5 +158,9 @@ nrf53_spi: &spi2 {
             status = "disabled";
         };
     };
+
+    // chosen {
+    //     zephyr,console = &cdc_acm_1;
+    // };
 };
 

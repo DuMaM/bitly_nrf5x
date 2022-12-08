@@ -42,7 +42,7 @@
 
 K_SEM_DEFINE(ads129x_new_data, 0, 100);
 
-LOG_MODULE_REGISTER(ads129x_log, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(ecg, LOG_LEVEL_INF);
 #define ADS_CLK_PERIOD_US 30
 static void ads129x_drdy_init_callback(void);
 static void ads129x_drdy_callback_deinit(void);
@@ -105,7 +105,6 @@ const struct spi_cs_control ads129x_cs_ctrl = {
 // 0                        1                   Rising          Falling
 ads129x_config_t ads129x_config = {
     .data_rate = 2000,
-    .timestamp = 0,
     .bytes_to_send = 0,
     .print_data = false,
     .ads129x_spi = DEVICE_DT_GET(SPI_NODE),
@@ -474,12 +473,15 @@ void ads129x_dump_data(uint8_t *input_data)
         uint8_t print_buf_pos = 0;
         memset(data, 0, sizeof(data));
 
-        for (int i = 0; i < ADS129X_DATA_NUM; i++)
+        //data[0] = conv_u24_to_i32(conv_raw_to_u24(input_data, 0));
+        //print_buf_pos += snprintk(print_buf, sizeof(print_buf), "%08x ", data[0]);
+
+        for (int i = 1; i < ADS129X_DATA_NUM; i++)
         {
             data[i] = conv_u24_to_i32(conv_raw_to_u24(input_data, i * 3));
-            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%" PRIi32 " ", data[i]);
+            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9"PRIi32  " ", (data[i]*300)/1000);
         }
-        LOG_INF("Data: %s", print_buf);
+        LOG_INF("%s", print_buf);
     }
 }
 
@@ -718,18 +720,5 @@ void ads129x_load_augmented_leads(uint8_t *buffer)
     conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), buffer, ADS129x_AVL_OFFSET);
     conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), buffer, ADS129x_AVF_OFFSET);
 }
-
-uint8_t* ads129x_write_timestamp(uint8_t* data) {
-    static uint32_t local_timestamp = 0;
-    uint32_t tmp_timestamp = (uint32_t)(k_uptime_get() - ads129x_config.timestamp);
-    //uint32_t tmp_timestamp = (uint32_t)((k_cycle_get_32() *  1000000)/ CONFIG_SYS_CLOCK_TICKS_PER_SEC - ads129x_config.timestamp);
-    if (local_timestamp == tmp_timestamp) {
-        tmp_timestamp++;
-    }
-
-    local_timestamp = tmp_timestamp;
-    return conv_u24_to_raw(tmp_timestamp, data, 0);
-}
-
 
 #endif

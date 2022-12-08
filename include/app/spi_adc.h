@@ -340,14 +340,12 @@ void ads129x_dump_regs();
 int8_t ads129x_reset_data(void);
 
 void ads129x_load_augmented_leads(uint8_t *buffer);
-uint8_t* ads129x_write_timestamp(uint8_t* data);
 
 uint32_t set_bytes_to_send(uint32_t _bytes_to_send);
 int wait_for_finish();
 
 typedef struct _ads129x_config
 {
-    int64_t timestamp;
     uint32_t bytes_to_send;
     uint16_t data_rate;
     bool print_data;

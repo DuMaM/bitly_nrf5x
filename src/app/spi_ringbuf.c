@@ -17,7 +17,7 @@
 #include <spi_adc.h>
 
 
-LOG_MODULE_DECLARE(ads129x_log);
+LOG_MODULE_DECLARE(ecg);
 
 
 #ifdef CONFIG_ADS129x_RINGBUFF
@@ -68,7 +68,7 @@ void ads129x_read_data(void)
     uint16_t size = ring_buf_put_claim(&ads129x_ring_buffer, &data, ADS129x_DATA_BUFFER_SIZE);
 
     /* add timestamp */
-    ads129x_write_timestamp(data);
+    utils_write_timestamp(data);
 
     /* do processing */
     /* NOTE: Work directly on a ring buffer memory */
@@ -87,8 +87,7 @@ void ads129x_read_data(void)
 
 int8_t ads129x_reset_data(void)
 {
-    ads129x_config.timestamp = k_uptime_get();
-
+    utils_reset_timestamp();
     ring_buf_reset(&ads129x_ring_buffer);
     return 0;
 }
@@ -109,7 +108,7 @@ void ads129x_read_data_continuous(void)
     uint16_t size = ring_buf_put_claim(&ads129x_ring_buffer, &data, ADS129x_DATA_BUFFER_SIZE);
 
     /* add timestamp */
-    ads129x_write_timestamp(data);
+    utils_write_timestamp(data);
 
     /* do processing */
     /* NOTE: Work directly on a ring buffer memory */

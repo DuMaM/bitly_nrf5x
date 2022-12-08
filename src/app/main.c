@@ -22,3 +22,5 @@ void main(void)
     uint32_t a = NRF_FICR->INFO.VARIANT;
     LOG_INF("This board has the variant %" PRIu32, a);
 }
+
+// UART_BAUDRATE_BAUDRATE_Baud115200
