@@ -123,43 +123,6 @@ static void performance_test_received(const bt_performance_test_metrics_t *met)
 }
 
 
-static void performance_test_sent(struct bt_conn *conn, void *user_data)
-{
-
-
-	// static uint32_t cycle_stamp;
-	// uint64_t delta;
-
-	// delta = k_cycle_get_32() - cycle_stamp;
-	// delta = k_cyc_to_ns_floor64(delta);
-
-	// /* if last data rx-ed was greater than 1 second in the past,
-	//  * reset the metrics.
-	//  */
-	// if (delta > (1U * NSEC_PER_SEC)) {
-	// 	printk("%s: count= %u, len= %u, rate= %u bps.\n", __func__,
-	// 	       write_count, write_len, write_rate);
-
-	// 	last_write_rate = write_rate;
-
-	// 	write_count = 0U;
-	// 	write_len = 0U;
-	// 	write_rate = 0U;
-	// 	cycle_stamp = k_cycle_get_32();
-	// } else {
-	// 	uint16_t len;
-
-	// 	write_count++;
-
-	// 	/* Extract the 16-bit data length stored in user_data */
-	// 	len = (uint32_t)user_data & 0xFFFF;
-
-	// 	write_len += len;
-	// 	write_rate = ((uint64_t)write_len << 3) * (1U * NSEC_PER_SEC) /
-	// 		     delta;
-	// }
-}
-
 /**
  * @brief Executed when data is sended back to master
  *

@@ -16,6 +16,7 @@
 #include <cmd.h>
 #include <cmd_run.h>
 
+#include <app_utils.h>
 #include <spi_adc.h>
 
 LOG_MODULE_DECLARE(ecg);

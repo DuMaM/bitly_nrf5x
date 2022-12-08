@@ -10,101 +10,86 @@
 #include <app_utils.h>
 #include "sim_file.h"
 #include <cmd.h>
+#include <zephyr/sys/ring_buffer.h>
 
-extern uint8_t test_data_buffer[];
-extern uint16_t test_data_buffer_size;
-static uint8_t test_runs = 1;
-static int64_t stamp;
-
+LOG_MODULE_DECLARE(main);
 
 K_THREAD_STACK_DEFINE(sim_stack, 4096);
 struct k_thread sim_thread;
 
+K_THREAD_STACK_DEFINE(sim_stack, 4096);
+struct k_thread sim_thread_ble;
 
-LOG_MODULE_DECLARE(main);
+RING_BUF_DECLARE(sim_ring_buffer, 247*4);
+static uint32_t bytes_to_send = 0;
 
-#define SIM_VALUE_BYTE_SIZE 3
+int32_t sim_load_row_data(uint8_t *load_data, uint32_t* sim_pos) {
+    uint8_t* tmp = utils_write_timestamp(load_data);
 
-static uint8_t write_data_to_buffer(uint8_t* buffer, uint32_t* data) {
-    #if SIM_VALUE_BYTE_SIZE >= 1
-                *(buffer + 0) = (uint8_t)(*(data));
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 2
-                *(buffer + 1) = (uint8_t)(*(data) >> 8);
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 3
-                *(buffer + 2) = (uint8_t)(*(data) >> 16);
-    #endif
-    #if SIM_VALUE_BYTE_SIZE >= 4
-                *(buffer + 3) = (uint8_t)((*data) >> 24);
-    #endif
-
-    return SIM_VALUE_BYTE_SIZE;
+    *sim_pos = (*sim_pos) % SIM_X;
+    for (int i = 0; i < SIM_Y; i++)
+    {
+        tmp = conv_u24_to_raw(sim_data[*sim_pos][i], tmp, 0);
+    }
+    (*sim_pos)++;
+    return SIM_Y*3 + 3;
 }
 
-static uint32_t send_test_sim_data()
+
+int32_t sim_get_data(uint8_t *load_data, int32_t size, uint32_t* sim_pos)
 {
-    uint32_t sim_prog = 0;
-    bool sim_skip_timestamp = false; // because there are times when timestamp is added as a last one
-                                     // loop finishes cycle and then it's added again
-                                     // this ruins a code structure so we want protect it without big changes
-    uint16_t buffer_size = 0;
-    uint32_t sim_written = 0;
-    int err = 0;
-    uint32_t data_stamp = 0;
+    int32_t loaded = 0;
+    uint32_t buffer_size = size;
 
-    /*
-     * treat data as one block of memory thanks to [] operator
-     */
-    uint32_t *sim_ptr = ((uint32_t *)sim_data);
-
-    while (sim_prog < SIM_SIZE)
+    //* determine number of data
+    if (size > test_params.data_len->tx_max_len - 7)
     {
-        /*
-         * if we are in middle of a buffer
-         * set max buffer value as input
-         * and update index of sim data
-         */
-        if ((SIM_SIZE - sim_prog) * SIM_VALUE_BYTE_SIZE > test_params.data_len->tx_max_len - 7)
-        {
-            buffer_size = test_params.data_len->tx_max_len - 7;
-            buffer_size -= buffer_size % SIM_VALUE_BYTE_SIZE;
-        }
+        buffer_size = test_params.data_len->tx_max_len - 7;
+    }
 
-        /* otherwise use only remaining sim data values */
-        else {
-            buffer_size = (SIM_SIZE - sim_prog) * 3;
-        }
+    while (loaded < buffer_size)
+    {
+        loaded += sim_load_row_data(load_data, sim_pos);
+    }
 
+    return loaded;
+}
 
-        for (int i = 0; i < buffer_size; i = i + SIM_VALUE_BYTE_SIZE, sim_prog++)
-        {
-            if (!(sim_prog % SIM_Y) && !sim_skip_timestamp) {
-                /* add timestamp before every record */
-                sim_written += utils_write_timestamp(test_data_buffer + i);
+static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
+{
+    // data tracing
+    uint32_t sim_pos = 0;
+    uint32_t load_data = 0;
+    uint32_t remaining = 0;
 
-                /* record new value in buffer */
-                i = i + SIM_VALUE_BYTE_SIZE;
+    // ring buff
+    uint8_t* tmp_buff;
+    uint32_t claimed = 0;
 
-                /* check if we still in buffer */
-                if (!(i < buffer_size)) {
-                    sim_skip_timestamp = true;
-                    // sim_prog will not be bumped here
-                    break;
-                }
-            }
-            sim_skip_timestamp = false;
-            sim_written += write_data_to_buffer(test_data_buffer + i, sim_ptr + sim_prog);
-        }
+    // ble monitoring
+    uint32_t sent_data = 0;
+    int err = 0;
 
-        err = bt_performance_test_write(&performance_test, test_data_buffer, buffer_size);
+    while (load_data < _bytes_to_send)
+    {
+        remaining = _bytes_to_send - load_data;
+
+        ring_buf_put_claim(&sim_ring_buffer, &tmp_buff, remaining);
+        claimed = sim_get_data(tmp_buff, remaining, &sim_pos);
+        ring_buf_put_finish(&sim_ring_buffer, claimed);
+
+        sent_data = claimed >= test_params.data_len->tx_max_len - 7 ? test_params.data_len->tx_max_len - 7 : claimed;
+        claimed = ring_buf_get_claim(&sim_ring_buffer, &tmp_buff, sent_data);
+        err = bt_performance_test_write(&performance_test, tmp_buff, claimed);
         if (err)
         {
             LOG_ERR("GATT write failed (err %d)", err);
             break;
         }
+        ring_buf_get_finish(&sim_ring_buffer, claimed);
+        load_data += claimed;
     }
-    return sim_written;
+    return load_data;
 }
 
 static void sim_test_run()
@@ -114,7 +99,7 @@ static void sim_test_run()
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
 
     int64_t delta;
-    uint32_t prog = 0;
+    int64_t stamp;
 
     int err;
     err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIM);
@@ -127,13 +112,10 @@ static void sim_test_run()
     /* get cycle stamp */
     LOG_INF("=== Start sim data transfer ===");
     stamp = k_uptime_get_32();
-    for (int i = 0; i < test_runs; i++)
-    {
-        prog += send_test_sim_data();
-    }
+    bytes_to_send = send_test_sim_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
     LOG_INF("Done");
-    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
+    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", bytes_to_send, bytes_to_send / 1024, delta, ((uint64_t)bytes_to_send * 8 / delta));
 
     /* read back char from peer */
     err = bt_performance_test_read(&performance_test);
@@ -142,11 +124,9 @@ static void sim_test_run()
         LOG_ERR("GATT read failed (err %d)", err);
         return;
     }
-
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
 
     instruction_print();
-
     return;
 }
 
@@ -165,10 +145,10 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
         return -EINVAL;
     }
 
-    test_runs = strtol(argv[1], NULL, 10);
-    if (test_runs < 1)
+    bytes_to_send = strtol(argv[1], NULL, 10);
+    if (bytes_to_send < 100)
     {
-        shell_error(shell, "Invalid parameter %" PRIu8, test_runs);
+        shell_error(shell, "Invalid parameter %" PRIu8, bytes_to_send);
         return -EINVAL;
     }
 

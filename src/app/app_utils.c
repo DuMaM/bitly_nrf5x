@@ -2,13 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zephyr/timing/timing.h>
 #include <zephyr/kernel.h>
 
 // based on
 // https://nestedsoftware.com/2018/03/20/calculating-a-moving-average-on-streaming-data-5a7k.22879.html
 
-timing_t timestamp;
+uint32_t timestamp;
 
 void dm_update(dynamic_mean_t *dm, uint64_t new_value)
 {
@@ -49,7 +48,7 @@ void utils_reset_timestamp() {
 }
 
 uint8_t* utils_write_timestamp(uint8_t* data) {
-    static timing_t end_time;
+    static uint32_t end_time;
 
     end_time = k_cycle_get_32();
     return conv_u24_to_raw(k_cyc_to_us_ceil32(end_time), data, 0);
