@@ -122,6 +122,7 @@ static void sim_test_run()
         return;
     }
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
+    cmd_bt_dump_data(NULL, 0);
 
     instruction_print();
     return;

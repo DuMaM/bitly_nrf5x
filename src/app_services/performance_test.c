@@ -13,10 +13,9 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/logging/log.h>
 
 #include <performance_test.h>
-
-#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 
@@ -26,6 +25,41 @@ static const struct bt_performance_test_cb *callbacks;
 
 static uint32_t clock_cycles;
 static uint32_t kb;
+
+// crazy buffer
+static char print_buff[BER_MIN_DATA_STR];
+static char *print_buff_pos = print_buff;
+static uint32_t print_buff_used = 0;
+static bool enable_logs = false;
+
+void cmd_enable_logs(bool should_print) {
+    enable_logs = should_print;
+}
+
+void cmd_bt_dump_data(const uint8_t *input_data, uint16_t size)
+{
+    uint32_t i = 0;
+    if (enable_logs)
+    {
+        if (input_data)
+        {
+            for (; i < size; i++)
+            {
+                print_buff_used += snprintk(print_buff_pos, sizeof(print_buff) - print_buff_used, "%02X", input_data[i]);
+                print_buff_pos = print_buff + print_buff_used;
+            }
+        }
+        else
+        {
+            for (; i < print_buff_used; i = i + 64)
+            {
+                LOG_INF("%.64s", print_buff + i);
+            }
+            print_buff_used = 0;
+            print_buff_pos = print_buff;
+        }
+    }
+}
 
 /* callback function fot get data received into get buffer from slave */
 static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
@@ -76,6 +110,8 @@ static ssize_t write_callback(struct bt_conn *conn,
         callbacks->data_received(met_data);
     }
 
+    cmd_bt_dump_data(buf, len);
+
     return len;
 }
 
@@ -93,8 +129,9 @@ static ssize_t read_callback(struct bt_conn *conn,
         callbacks->data_send(metrics);
     }
     LOG_DBG("Send characteristic data.");
-
-    return bt_gatt_attr_read(conn, attr, buf, len, offset, attr->user_data, len);
+    ssize_t result = bt_gatt_attr_read(conn, attr, buf, len, offset, attr->user_data, len);
+    cmd_bt_dump_data(NULL, 0);
+    return result;
 }
 
 // saves data which was send from master to slave
@@ -214,7 +251,7 @@ int bt_performance_test_handles_assign(struct bt_gatt_dm *dm,
     return 0;
 }
 
-// slave -> master
+// master -> slave -> master
 int bt_performance_test_read(struct bt_performance_test *performance_test)
 {
     int err;
@@ -237,6 +274,7 @@ int bt_performance_test_read(struct bt_performance_test *performance_test)
 int bt_performance_test_write(struct bt_performance_test *performance_test,
                               const uint8_t *data, uint16_t len)
 {
+    cmd_bt_dump_data(data, len);
     return bt_gatt_write_without_response_cb(performance_test->conn,
                                              performance_test->char_handle,
                                              data, len, false,

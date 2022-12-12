@@ -19,10 +19,16 @@
 
 #include <bluetooth/gatt_dm.h>
 
+#define BER_MIN_DATA 100000 // should be 200000
+#define BER_MIN_DATA_STR BER_MIN_DATA*2
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+    void cmd_bt_dump_data(const uint8_t *input_data, uint16_t size);
+    void cmd_enable_logs(bool should_print);
 
     /** @brief Performance test metrics. */
     typedef struct __attribute__((__packed__)) bt_performance_test_metrics

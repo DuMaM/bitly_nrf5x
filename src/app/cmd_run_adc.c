@@ -12,7 +12,6 @@
 
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
-static int64_t stamp;
 
 LOG_MODULE_DECLARE(main);
 
@@ -75,8 +74,8 @@ static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
                 LOG_ERR("GATT write failed (err %d)", err);
                 break;
             }
-
             prog += analog_data_size;
+
         //}
     }
     return prog;
@@ -90,6 +89,7 @@ void notify_packet_sent(struct bt_conn *conn, void *user_data) {
 static void adc_test_run()
 {
     int64_t delta;
+    int64_t stamp;
     uint32_t prog = 0;
 
     // add callback to monitor data sent and reset data
@@ -102,7 +102,6 @@ static void adc_test_run()
     prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
 
-    ads129x_print(false);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
 
     /* read back char from peer */
@@ -114,6 +113,7 @@ static void adc_test_run()
     }
 
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
+    cmd_bt_dump_data(NULL, 0);
 
     // clean after tests
     ads129x_data_disable();
@@ -156,7 +156,6 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     /* get cycle stamp */
     LOG_INF("=== Reseting data buffer ===");
     ads129x_data_enable();
-    ads129x_print(true);
     LOG_INF("=== Start analog data transfer ===");
     k_usleep(500);
 

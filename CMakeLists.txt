@@ -32,8 +32,3 @@ include_directories("include/app")
 
 # https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/ug_multi_image.html?highlight=child_image
 zephyr_library_include_directories(${ZEPHYR_BASE}/samples/bluetooth)
-# add_child_image(
-#    NAME hci_rpmsg
-#    SOURCE_DIR ${ZEPHYR_BASE}/samples/bluetooth/hci_rpmsg
-#    DOMAIN CPUNET
-#    )
