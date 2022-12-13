@@ -8,6 +8,13 @@
 #include <zephyr/sys_clock.h>
 #include <zephyr/sys/ring_buffer.h>
 #include <zephyr/types.h>
+#include <zephyr/kernel_structs.h>
+#include <zephyr/toolchain.h>
+
+#include <zephyr/wait_q.h>
+#include <zephyr/init.h>
+#include <zephyr/syscall_handler.h>
+#include <zephyr/sys/check.h>
 
 #include <stdlib.h>
 #include <stddef.h>

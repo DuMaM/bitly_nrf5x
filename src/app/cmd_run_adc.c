@@ -102,8 +102,6 @@ static void adc_test_run()
     prog = send_test_ecg_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
 
-    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
-
     /* read back char from peer */
     int err = bt_performance_test_read(&performance_test);
     if (err)
@@ -113,7 +111,9 @@ static void adc_test_run()
     }
 
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
+
     cmd_bt_dump_data(NULL, 0);
+    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
 
     // clean after tests
     ads129x_data_disable();
@@ -144,9 +144,9 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
     }
 
     bytes_to_send = strtoul(argv[1], NULL, 10);
-    if (ADS129x_DATA_BUFFER_SIZE > bytes_to_send)
+    if (ADS129x_DATA_BUFFER_SIZE > bytes_to_send && (bytes_to_send < BER_MIN_DATA && cmd_status_logs()))
     {
-        shell_error(shell, "Invalid parameter %" PRIu8 ", it should be bigger then max data send from spi device", bytes_to_send);
+        shell_error(shell, "Invalid parameter %" PRIu32 ", it should be bigger then max data send from spi device", bytes_to_send);
         return -EINVAL;
     }
 

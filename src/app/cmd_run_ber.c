@@ -81,9 +81,6 @@ int test_run_ber(const struct shell *shell,
         delta += k_uptime_delta(&stamp);
     }
 
-    LOG_INF("Done");
-    LOG_INF("[local] sent %" PRIi64 " bytes (%" PRIi64 " KB) in %" PRIi64 " ms at %" PRIu64 " kbps", data, data / 1024, delta, ((data * 8) / delta));
-
     /* read back char from peer and wait to finish it */
     err = bt_performance_test_read(&performance_test);
     if (err)
@@ -93,7 +90,7 @@ int test_run_ber(const struct shell *shell,
     }
 
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
-    LOG_INF("Command finished");
+    LOG_INF("[local] sent %" PRIi64 " bytes (%" PRIi64 " KB) in %" PRIi64 " ms at %" PRIu64 " kbps", data, data / 1024, delta, ((data * 8) / delta));
 
     return 0;
 }

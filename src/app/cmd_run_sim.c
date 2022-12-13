@@ -111,8 +111,6 @@ static void sim_test_run()
     stamp = k_uptime_get_32();
     bytes_to_send = send_test_sim_data(bytes_to_send);
     delta = k_uptime_delta(&stamp);
-    LOG_INF("Done");
-    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", bytes_to_send, bytes_to_send / 1024, delta, ((uint64_t)bytes_to_send * 8 / delta));
 
     /* read back char from peer */
     err = bt_performance_test_read(&performance_test);
@@ -122,6 +120,7 @@ static void sim_test_run()
         return;
     }
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
+    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", bytes_to_send, bytes_to_send / 1024, delta, ((uint64_t)bytes_to_send * 8 / delta));
     cmd_bt_dump_data(NULL, 0);
 
     instruction_print();

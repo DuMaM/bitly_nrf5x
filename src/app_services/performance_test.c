@@ -27,8 +27,8 @@ static uint32_t clock_cycles;
 static uint32_t kb;
 
 // crazy buffer
-static char print_buff[BER_MIN_DATA_STR];
-static char *print_buff_pos = print_buff;
+static uint8_t print_buff[BER_MIN_DATA+42];
+static uint8_t *print_buff_pos = print_buff;
 static uint32_t print_buff_used = 0;
 static bool enable_logs = false;
 
@@ -36,24 +36,33 @@ void cmd_enable_logs(bool should_print) {
     enable_logs = should_print;
 }
 
-void cmd_bt_dump_data(const uint8_t *input_data, uint16_t size)
+bool cmd_status_logs() {
+    return enable_logs;
+}
+
+void cmd_bt_dump_data(const uint8_t *input_data, uint32_t size)
 {
-    uint32_t i = 0;
+    #define DUMP_SIZE 256
+
     if (enable_logs)
     {
         if (input_data)
         {
-            for (; i < size; i++)
-            {
-                print_buff_used += snprintk(print_buff_pos, sizeof(print_buff) - print_buff_used, "%02X", input_data[i]);
-                print_buff_pos = print_buff + print_buff_used;
-            }
+            memcpy(print_buff_pos, input_data, size);
+            print_buff_used += size;
+            print_buff_pos = print_buff + print_buff_used;
         }
-        else
+        else if (print_buff_used)
         {
-            for (; i < print_buff_used; i = i + 64)
+            print_buff_pos = print_buff;
+            uint32_t space_left = 0;
+            while(print_buff_used)
             {
-                LOG_INF("%.64s", print_buff + i);
+                k_usleep(100000);
+                space_left = print_buff_used > DUMP_SIZE ? DUMP_SIZE : print_buff_used;
+                LOG_HEXDUMP_INF(print_buff_pos, space_left,  "BLE Data:");
+                print_buff_pos += space_left;
+                print_buff_used -= space_left;
             }
             print_buff_used = 0;
             print_buff_pos = print_buff;
@@ -121,16 +130,14 @@ static ssize_t read_callback(struct bt_conn *conn,
                              uint16_t len, uint16_t offset)
 {
     const bt_performance_test_metrics_t *metrics = attr->user_data;
-
     len = MIN(sizeof(bt_performance_test_metrics_t), len);
 
+    LOG_DBG("Send characteristic data.");
+    ssize_t result = bt_gatt_attr_read(conn, attr, buf, len, offset, attr->user_data, len);
     if (callbacks && callbacks->data_send)
     {
         callbacks->data_send(metrics);
     }
-    LOG_DBG("Send characteristic data.");
-    ssize_t result = bt_gatt_attr_read(conn, attr, buf, len, offset, attr->user_data, len);
-    cmd_bt_dump_data(NULL, 0);
     return result;
 }
 

@@ -66,8 +66,6 @@ static void simple_test_run()
 
     delta = k_uptime_delta(&stamp);
 
-    LOG_INF("Done");
-    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
 
     /* read back char from peer */
     err = bt_performance_test_read(&performance_test);
@@ -78,6 +76,7 @@ static void simple_test_run()
     }
 
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
+    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
 
     instruction_print();
 

@@ -576,5 +576,12 @@ void bt_init(void)
     bt_conn_cb_register(&conn_callbacks);
     LOG_INF("Bluetooth initialized");
 
+    err = bt_performance_test_init(&performance_test, &performance_test_cb);
+    if (err)
+    {
+        LOG_ERR("Performance test service initialization failed.");
+        return -EFAULT;
+    }
+
     scan_init();
 }
