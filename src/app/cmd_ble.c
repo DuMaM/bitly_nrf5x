@@ -331,6 +331,42 @@ static int print_cmd(const struct shell *shell, size_t argc,
     return 0;
 }
 
+// add connect command
+static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv)
+{
+    shell_print(shell, "\nSlave role.\n");
+
+    /* initialize work item for test */
+    k_thread_create(&config_thread, config_stack,
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    adv_start,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+
+    return 0;
+}
+
+static int set_role_to_master(const struct shell *shell, size_t argc, char **argv)
+{
+    shell_print(shell, "\nMaster role.\n");
+    restore_state();
+
+    /* initialize work item for test */
+    k_thread_create(&config_thread, config_stack,
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    scan_start,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+
+    return 0;
+}
+
+SHELL_STATIC_SUBCMD_SET_CREATE(sub_role,
+                               SHELL_CMD(master, NULL, "Set master role - start listening for input", set_role_to_master),
+                               SHELL_CMD(slave, NULL, "Set slave role - start advertising", set_role_to_slave),
+                               SHELL_SUBCMD_SET_END);
+
+
 SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
                                SHELL_CMD(1M, NULL, "Set preferred PHY to 1Mbps", cmd_phy_1m),
                                SHELL_CMD(2M, NULL, "Set preferred PHY to 2Mbps", cmd_phy_2m),
@@ -343,6 +379,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
                                SHELL_SUBCMD_SET_END);
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
+                               SHELL_CMD(connect, &sub_role, "Establish connection and set device role", default_cmd),
                                SHELL_CMD(data_length, NULL, "Configure data length", cmd_data_len),
                                SHELL_CMD(data_time, NULL, "Configure data frame timing", cmd_data_timing),
                                SHELL_CMD(conn_interval, NULL, "Configure connection interval <1.25ms units>", cmd_conn_interval),
@@ -353,4 +390,4 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
                                SHELL_CMD(print, NULL, "Print current configuration", print_cmd),
                                SHELL_SUBCMD_SET_END);
 
-SHELL_CMD_REGISTER(config, &sub_config, "Configure testing parameters", default_cmd);
+SHELL_CMD_REGISTER(ble, &sub_config, "Sets up BLE testing parameters", default_cmd);
