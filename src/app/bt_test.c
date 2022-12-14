@@ -28,7 +28,7 @@ K_SEM_DEFINE(bt_test_config_phy_sem, 0, 1);
 K_SEM_DEFINE(bt_test_config_int_sem, 0, 1);
 
 static volatile bool test_ready = false;
-struct bt_conn *default_conn = NULL;
+static struct bt_conn *default_conn = NULL;
 static struct bt_uuid *uuid128 = BT_UUID_PERF_TEST;
 static struct bt_gatt_exchange_params exchange_params = {0};
 static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, 0, 400);
@@ -580,7 +580,6 @@ void bt_init(void)
     if (err)
     {
         LOG_ERR("Performance test service initialization failed.");
-        return -EFAULT;
     }
 
     scan_init();

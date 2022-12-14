@@ -38,10 +38,6 @@ static void simple_test_run()
         return;
     }
     uint32_t target_frame_size = test_params.data_len->tx_max_len - 7;
-    if (test_params.fit_buffer) {
-        target_frame_size =  ((test_params.data_len->tx_max_len - 7) / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE;
-    }
-
     /* get cycle stamp */
     LOG_INF("=== Start simple tests img transfer ===");
     stamp = k_uptime_get_32();
