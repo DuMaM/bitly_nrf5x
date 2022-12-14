@@ -23,6 +23,7 @@ test_params_t test_params = {
     .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT),
     .phy = BT_CONN_LE_PHY_PARAM_2M,
     .data_len = BT_CONN_LE_DATA_LEN_PARAM(251, 1064),
+    .fit_buffer = true,
     .enable_rssi = true};
 
 static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
@@ -287,6 +288,33 @@ static int config_data_dump(const struct shell *shell, size_t argc, char **argv)
     return 0;
 }
 
+static int config_fit_buff(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc == 1)
+    {
+        shell_help(shell);
+        return SHELL_CMD_HELP_PRINTED;
+    }
+
+    if (argc > 2)
+    {
+        shell_error(shell, "%s: bad parameters count", argv[0]);
+        return -EINVAL;
+    }
+
+    int8_t fit_buff = atob(argv[1]);
+    if (fit_buff < 0)
+    {
+        shell_error(shell, "Invalid parameter try true/yes/y/1 or false/no/n/0");
+        return -EINVAL;
+    }
+
+    shell_print(shell, "Fit buff is: %s", fit_buff > 0 ? "enabled" : "disabled");
+    test_params.fit_buffer = fit_buff > 0;
+
+    return 0;
+}
+
 static int print_cmd(const struct shell *shell, size_t argc,
                      char **argv)
 {
@@ -321,6 +349,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
                                SHELL_CMD(phy, &phy_sub, "Configure connection interval", default_cmd),
                                SHELL_CMD(rssi, NULL, "RSSI configuration y/n", rssi_cmd),
                                SHELL_CMD(dump, NULL, "Print ble data", config_data_dump),
+                               SHELL_CMD(fit, NULL, "Always fit buffer with ble data", config_fit_buff),
                                SHELL_CMD(print, NULL, "Print current configuration", print_cmd),
                                SHELL_SUBCMD_SET_END);
 

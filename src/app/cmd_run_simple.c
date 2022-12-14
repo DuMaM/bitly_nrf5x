@@ -37,23 +37,28 @@ static void simple_test_run()
         LOG_ERR("GATT read failed (err %d)", err);
         return;
     }
+    uint32_t target_frame_size = test_params.data_len->tx_max_len - 7;
+    if (test_params.fit_buffer) {
+        target_frame_size =  ((test_params.data_len->tx_max_len - 7) / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE;
+    }
 
     /* get cycle stamp */
     LOG_INF("=== Start simple tests img transfer ===");
     stamp = k_uptime_get_32();
-    uint16_t buffer_size = test_data_buffer_size;
+    uint16_t buffer_size = target_frame_size;
     uint8_t *img_prt = NULL;
+
+
     while (prog < IMG_SIZE)
     {
         img_prt = ((uint8_t *)img) + prog;
-        if (IMG_SIZE - prog > test_data_buffer_size)
+        buffer_size = IMG_SIZE - prog;
+        if (IMG_SIZE - prog > target_frame_size)
         {
-            buffer_size = test_data_buffer_size;
+            buffer_size = target_frame_size;
         }
-        else
-        {
-            buffer_size = IMG_SIZE - prog;
-        }
+
+
 
         err = bt_performance_test_write(&performance_test, img_prt, buffer_size);
         if (err)

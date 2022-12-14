@@ -8,6 +8,7 @@
 
 #include <performance_test.h>
 #include <app_utils.h>
+#include <spi_adc.h>
 #include "sim_file.h"
 #include <cmd.h>
 #include <zephyr/sys/ring_buffer.h>
@@ -38,11 +39,17 @@ int32_t sim_get_data(uint8_t *load_data, int32_t size, uint32_t* sim_pos)
     int32_t loaded = 0;
     uint32_t buffer_size = size;
 
-    //* determine number of data
-    if (size > test_params.data_len->tx_max_len - 7)
-    {
-        buffer_size = test_params.data_len->tx_max_len - 7;
+    uint32_t target_frame_size = test_params.data_len->tx_max_len - 7;
+    if (test_params.fit_buffer) {
+        target_frame_size =  ((test_params.data_len->tx_max_len - 7) / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE;
     }
+
+    //* determine number of data
+    if (size > target_frame_size)
+    {
+        buffer_size = target_frame_size;
+    }
+
 
     while (loaded < buffer_size)
     {
@@ -66,6 +73,7 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
     // ble monitoring
     uint32_t sent_data = 0;
     int err = 0;
+
 
     while (load_data < _bytes_to_send)
     {

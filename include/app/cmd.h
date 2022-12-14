@@ -25,6 +25,7 @@ typedef struct
     struct bt_conn_le_phy_param *phy;
     struct bt_conn_le_data_len_param *data_len;
     bool enable_rssi;
+    bool fit_buffer;
 } test_params_t;
 extern test_params_t test_params;
 

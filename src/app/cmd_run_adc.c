@@ -38,11 +38,16 @@ static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
     bytes_to_send = set_bytes_to_send(_bytes_to_send);
     LOG_INF("Sending %"PRIu32" bytes (value after rounding to max packet size)", bytes_to_send);
 
+    uint32_t target_frame_size = test_params.data_len->tx_max_len - 7;
+    if (test_params.fit_buffer) {
+        target_frame_size =  ((test_params.data_len->tx_max_len - 7) / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE;
+    }
+
     while (prog < bytes_to_send)
     {
         analog_data_size = bytes_to_send - prog;
-        if (test_params.data_len->tx_max_len - 7 <= analog_data_size) {
-            analog_data_size = test_params.data_len->tx_max_len - 7;
+        if (target_frame_size <= analog_data_size) {
+            analog_data_size = target_frame_size;
         }
 
         /*
