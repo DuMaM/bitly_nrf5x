@@ -583,4 +583,7 @@ void bt_init(void)
     }
 
     scan_init();
+
+    //k_sys_work_q
+    adv_start();
 }
