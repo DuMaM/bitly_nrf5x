@@ -78,6 +78,7 @@ static void simple_test_run()
 
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
     LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
+    cmd_bt_dump_data(NULL, 0);
 
     instruction_print();
 

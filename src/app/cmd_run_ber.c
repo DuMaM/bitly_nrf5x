@@ -91,6 +91,7 @@ int test_run_ber(const struct shell *shell,
 
     k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
     LOG_INF("[local] sent %" PRIi64 " bytes (%" PRIi64 " KB) in %" PRIi64 " ms at %" PRIu64 " kbps", data, data / 1024, delta, ((data * 8) / delta));
+    cmd_bt_dump_data(NULL, 0);
 
     return 0;
 }

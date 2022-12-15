@@ -90,7 +90,6 @@ static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
         }
     }
 
-    k_work_submit(&work);
     return BT_GATT_ITER_STOP;
 }
 
