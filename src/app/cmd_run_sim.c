@@ -20,6 +20,7 @@ static struct k_thread sim_thread;
 
 RING_BUF_DECLARE(sim_ring_buffer, 247*4);
 static uint32_t bytes_to_send = 0;
+static uint32_t replay_runs = 0;
 
 int32_t sim_load_row_data(uint8_t *load_data, uint32_t* sim_pos) {
     uint8_t* tmp = utils_write_timestamp(load_data);
@@ -103,35 +104,39 @@ static void sim_test_run()
     const struct bt_conn_le_phy_param *phy = test_params.phy;
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
 
-    int64_t delta;
-    int64_t stamp;
 
-    int err;
-    err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIM);
-    if (err)
+    while (replay_runs--)
     {
-        LOG_ERR("GATT read failed (err %d)", err);
-        return;
+        int64_t delta = 0;
+        int64_t stamp = 0;
+        int err;
+        err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIM);
+        if (err)
+        {
+            LOG_ERR("GATT read failed (err %d)", err);
+            return;
+        }
+
+        /* get cycle stamp */
+        LOG_INF("=== Start sim data transfer ===");
+        stamp = k_uptime_get_32();
+        bytes_to_send = send_test_sim_data(bytes_to_send);
+        delta = k_uptime_delta(&stamp);
+
+        /* read back char from peer */
+        err = bt_performance_test_read(&performance_test);
+        if (err)
+        {
+            LOG_ERR("GATT read failed (err %d)", err);
+            return;
+        }
+        k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
+        LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", bytes_to_send, bytes_to_send / 1024, delta, ((uint64_t)bytes_to_send * 8 / delta));
+        cmd_bt_dump_data(NULL, 0);
+
+        instruction_print();
     }
 
-    /* get cycle stamp */
-    LOG_INF("=== Start sim data transfer ===");
-    stamp = k_uptime_get_32();
-    bytes_to_send = send_test_sim_data(bytes_to_send);
-    delta = k_uptime_delta(&stamp);
-
-    /* read back char from peer */
-    err = bt_performance_test_read(&performance_test);
-    if (err)
-    {
-        LOG_ERR("GATT read failed (err %d)", err);
-        return;
-    }
-    k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
-    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", bytes_to_send, bytes_to_send / 1024, delta, ((uint64_t)bytes_to_send * 8 / delta));
-    cmd_bt_dump_data(NULL, 0);
-
-    instruction_print();
     return;
 }
 
@@ -144,7 +149,7 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
         return SHELL_CMD_HELP_PRINTED;
     }
 
-    if (argc > 2)
+    if (argc > 3)
     {
         shell_error(shell, "%s: bad parameters count", argv[0]);
         return -EINVAL;
@@ -155,6 +160,12 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
     {
         shell_error(shell, "Invalid parameter %" PRIu8, bytes_to_send);
         return -EINVAL;
+    }
+
+    replay_runs = 1;
+    if (argc == 3)
+    {
+        replay_runs = strtol(argv[2], NULL, 10);
     }
 
     /* initialize work item for test */
