@@ -121,7 +121,6 @@ static void performance_test_received(const bt_performance_test_metrics_t *met)
     // }
 }
 
-
 /**
  * @brief Executed when data is sended back to master
  *
@@ -130,7 +129,6 @@ static void performance_test_received(const bt_performance_test_metrics_t *met)
 static void performance_test_send(const bt_performance_test_metrics_t *met)
 {
     LOG_INF("[local] received %u bytes (%u KB) in %u GATT writes at %u kbps", met->write_len, met->write_len / 1024, met->write_count, met->write_rate / 1000);
-    cmd_bt_dump_data(NULL, 0);
 }
 
 struct bt_performance_test_cb performance_test_cb = {

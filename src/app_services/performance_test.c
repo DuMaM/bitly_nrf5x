@@ -22,6 +22,7 @@ LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 static bt_performance_test_metrics_t met;
 static bt_test_type_t test_type;
 static const struct bt_performance_test_cb *callbacks;
+static struct k_work work;
 
 static uint32_t clock_cycles;
 static uint32_t kb;
@@ -89,6 +90,7 @@ static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
         }
     }
 
+    k_work_submit(&work);
     return BT_GATT_ITER_STOP;
 }
 
@@ -124,6 +126,10 @@ static ssize_t write_callback(struct bt_conn *conn,
     return len;
 }
 
+static void print_ble_data(struct k_work *item) {
+    cmd_bt_dump_data(NULL, 0);
+}
+
 // sends back metrics data to master
 static ssize_t read_callback(struct bt_conn *conn,
                              const struct bt_gatt_attr *attr, void *buf,
@@ -138,6 +144,7 @@ static ssize_t read_callback(struct bt_conn *conn,
     {
         callbacks->data_send(metrics);
     }
+    k_work_submit(&work);
     return result;
 }
 
@@ -206,6 +213,9 @@ int bt_performance_test_init(struct bt_performance_test *performance_test, struc
     }
 
     callbacks = cb;
+
+    k_work_init(&work, print_ble_data);
+
 
     return 0;
 }
