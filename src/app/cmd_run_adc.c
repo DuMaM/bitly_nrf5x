@@ -124,6 +124,7 @@ static void adc_test_run()
         extern struct bt_performance_test_cb performance_test_cb;
         // performance_test_cb.package_sent = &notify_packet_sent;
         k_sem_init(&cmd_count_writes_num, 2, 2);
+        ads129x_reset_data();
 
         // start transmission
         stamp = k_uptime_get_32();

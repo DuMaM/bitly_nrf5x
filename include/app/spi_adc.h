@@ -352,6 +352,7 @@ typedef struct _ads129x_config
     uint32_t bytes_to_send;
     uint16_t data_rate;
     bool print_data;
+    uint32_t packets_dropped;
 
     const struct device *ads129x_spi;
     struct spi_config ads129x_spi_cfg;

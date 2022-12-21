@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <cmd.h>
 #include <spi_adc.h>
+#include <app_utils.h>
 
 #ifdef CONFIG_SPI
 LOG_MODULE_DECLARE(main);

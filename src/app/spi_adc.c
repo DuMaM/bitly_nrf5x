@@ -112,6 +112,8 @@ ads129x_config_t ads129x_config = {
         .frequency = ADS129X_SPI_CLOCK_SPEED,
         .operation = SPI_OP_MODE_MASTER | SPI_MODE_CPHA | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
         .cs = &ads129x_cs_ctrl},
+    .packets_dropped = 0,
+
 };
 
 // checks
@@ -637,8 +639,6 @@ void ads129x_data_enable()
     ads129x_rdatac();
     LOG_INF("Data transfer enabled");
     ecg_status = true;
-
-    ads129x_reset_data();
 }
 
 void ads129x_data_disable()
@@ -648,6 +648,11 @@ void ads129x_data_disable()
     ads129x_stop();
     LOG_INF("Data transfer disabled");
     ecg_status = false;
+
+    if (ads129x_config.packets_dropped)
+    {
+        LOG_ERR("SPI dropped %" PRIu32 " packets of %d size", ads129x_config.packets_dropped, ADS129x_DATA_BUFFER_SIZE);
+    }
 }
 
 bool ads129x_get_status()
@@ -735,5 +740,14 @@ void ads129x_load_augmented_leads(uint8_t *buffer)
     conv_u24_to_raw(ads129x_get_aVL(lead1, lead2), buffer, ADS129x_AVL_OFFSET);
     conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), buffer, ADS129x_AVF_OFFSET);
 }
+
+#else
+
+ads129x_config_t ads129x_config = {
+    .data_rate = 2000,
+    .bytes_to_send = 0,
+    .print_data = false,
+    .packets_dropped = 0,
+};
 
 #endif

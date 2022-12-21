@@ -108,7 +108,7 @@ void ads129x_set_data()
 {
     /* track status of buffers */
     static size_t bytes_written = 0;
-
+    const size_t packet_size = sizeof(pipe_packet_t);
     /* add timestamp */
     utils_write_timestamp(tx_data.buffer);
 
@@ -122,7 +122,14 @@ void ads129x_set_data()
 
         ads129x_dump_data(tx_data.packet.leads._buffer);
         /* send data to the consumers */
-        k_pipe_put(&ads129x_pipe, &tx_data.buffer, ADS129x_DATA_BUFFER_SIZE, &bytes_written, sizeof(pipe_packet_u), K_NO_WAIT);
+        if (k_pipe_write_avail(&ads129x_pipe) < packet_size) {
+            ads129x_config.packets_dropped++;
+        } else {
+            ret = k_pipe_put(&ads129x_pipe, &tx_data.buffer, ADS129x_DATA_BUFFER_SIZE, &bytes_written, packet_size, K_USEC(100));
+            if (-EIO == ret) {
+                ads129x_config.packets_dropped++;
+            }
+        }
     }
 }
 

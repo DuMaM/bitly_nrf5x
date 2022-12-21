@@ -89,6 +89,7 @@ int8_t ads129x_reset_data(void)
 {
     utils_reset_timestamp();
     ring_buf_reset(&ads129x_ring_buffer);
+    ads129x_config.packets_dropped = 0;
     return 0;
 }
 
