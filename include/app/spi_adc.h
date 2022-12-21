@@ -344,6 +344,8 @@ void ads129x_load_augmented_leads(uint8_t *buffer);
 uint32_t set_bytes_to_send(uint32_t _bytes_to_send);
 int wait_for_finish();
 void ads129x_dump_data(uint8_t *input_data);
+void ads129x_enable_test_signal();
+void ads129x_enable_hrm_signal();
 
 typedef struct _ads129x_config
 {

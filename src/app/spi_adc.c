@@ -571,18 +571,33 @@ void ads129x_setup(void)
      */
     ads129x_safe_write_register(ADS129X_REG_CONFIG3, (1 << ADS129X_BIT_PD_REFBUF) + (1 << 6));
 
-    // setup channels
-    ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
-    ads129x_configChannel(2, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
-    for (int i = 3; i <= 8; i++)
-    {
-        ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
-    }
+    ads129x_enable_hrm_signal();
 
     gpio_pin_set_dt(&start_spec, 0);
 
     LOG_INF("Device ID: %d", ads129x_get_device_id());
     ads129x_dump_regs();
+}
+
+void ads129x_enable_test_signal()
+{
+    // test mode
+    ads129x_safe_write_register(ADS129X_REG_CONFIG2, ADS129X_TEST_FREQ_2HZ | 1 << ADS129X_BIT_TEST_AMP | 1 << ADS129X_BIT_INT_TEST);
+    for (int i = 1; i <= 8; i++)
+    {
+        ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_TEST);
+    }
+}
+
+void ads129x_enable_hrm_signal()
+{
+    // test mode
+    // ads129x_safe_write_register(ADS129X_REG_CONFIG2, 0);
+
+    for (int i = 1; i <= 8; i++)
+    {
+        ads129x_configChannel(i, false, ADS129X_GAIN_4X, ADS129X_MUX_NORMAL);
+    }
 }
 
 // #########

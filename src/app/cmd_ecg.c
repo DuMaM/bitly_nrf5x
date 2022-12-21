@@ -71,7 +71,33 @@ static int ecg_rate_settings(const struct shell *shell, size_t argc, char **argv
     return 0;
 }
 
+
+static int ecg_set_channels(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc == 1)
+    {
+        shell_help(shell);
+        return SHELL_CMD_HELP_PRINTED;
+    }
+
+    if (argc > 2)
+    {
+        shell_error(shell, "%s: bad parameters count", argv[0]);
+        return -EINVAL;
+    }
+
+    bool result = atob(argv[1]);
+    if (result) {
+        ads129x_enable_test_signal();
+    }else {
+        ads129x_enable_hrm_signal();
+    }
+    return 0;
+}
+
+
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_role,
+                               SHELL_CMD(test_mode, NULL, "Force device to use tests signals on all leads", ecg_set_channels),
                                SHELL_CMD(enable, NULL, "Enables continuos data transfer", ecg_data_enable),
                                SHELL_CMD(disable, NULL, "Disables continuos data transfer", ecg_data_disable),
                                SHELL_CMD(print, NULL, "Should data be printed (yes/no)", ecg_data_dump),
