@@ -32,7 +32,6 @@ extern test_params_t test_params;
 void instruction_print(void);
 int default_cmd(const struct shell *shell, size_t argc, char **argv);
 const char *phy_str(const struct bt_conn_le_phy_param *phy);
-int8_t atob(const char *buffer);
 
 
 #endif /* _CMD_H_ */

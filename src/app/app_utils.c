@@ -53,3 +53,21 @@ uint8_t* utils_write_timestamp(uint8_t* data) {
     end_time = k_cycle_get_32();
     return conv_u24_to_raw(k_cyc_to_us_ceil32(end_time), data, 0);
 }
+
+int8_t atob(const char *buffer)
+{
+#define lookup_size 4
+    const static char *lookup_negative[lookup_size] = {"false", "0", "n", "no"};
+    const static char *lookup_positive[lookup_size] = {"true", "1", "y", "yes"};
+
+    for (int i = 0; i < lookup_size; i++)
+    {
+        if (!strcmp(lookup_negative[i], buffer))
+            return 0;
+
+        if (!strcmp(lookup_positive[i], buffer))
+            return 1;
+    }
+
+    return -1;
+}

@@ -12,7 +12,7 @@
 #include <bt_test.h>
 #include <performance_test.h>
 
-
+#include <app_utils.h>
 LOG_MODULE_DECLARE(main);
 
 K_THREAD_STACK_DEFINE(config_stack, 1024);

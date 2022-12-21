@@ -75,23 +75,6 @@ const char *phy_str(const struct bt_conn_le_phy_param *phy)
 //     }
 // }
 
-int8_t atob(const char *buffer)
-{
-#define lookup_size 4
-    const static char *lookup_negative[lookup_size] = {"false", "0", "n", "no"};
-    const static char *lookup_positive[lookup_size] = {"true", "1", "y", "yes"};
-
-    for (int i = 0; i < lookup_size; i++)
-    {
-        if (!strcmp(lookup_negative[i], buffer))
-            return 0;
-
-        if (!strcmp(lookup_positive[i], buffer))
-            return 1;
-    }
-
-    return -1;
-}
 
 void instruction_print(void)
 {

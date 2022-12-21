@@ -17,5 +17,6 @@ uint8_t *conv_u24_to_raw(uint32_t u24_val, uint8_t *raw, uint16_t pos);
 
 uint8_t* utils_write_timestamp(uint8_t* data);
 void utils_reset_timestamp();
+int8_t atob(const char *buffer);
 
 #endif // _MOVING_AVG_H_
