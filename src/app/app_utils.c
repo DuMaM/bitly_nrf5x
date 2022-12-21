@@ -54,6 +54,11 @@ uint8_t* utils_write_timestamp(uint8_t* data) {
     return conv_u24_to_raw(k_cyc_to_us_ceil32(end_time), data, 0);
 }
 
+uint32_t utils_roundUp(uint32_t numToRound, uint32_t multiple)
+{
+    return ((numToRound - 1) / multiple) * multiple;
+}
+
 int8_t atob(const char *buffer)
 {
 #define lookup_size 4
