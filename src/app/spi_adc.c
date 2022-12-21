@@ -475,13 +475,13 @@ void ads129x_dump_data(uint8_t *input_data)
         uint8_t print_buf_pos = 0;
         memset(data, 0, sizeof(data));
 
-        //data[0] = conv_u24_to_i32(conv_raw_to_u24(input_data, 0));
-        //print_buf_pos += snprintk(print_buf, sizeof(print_buf), "%08x ", data[0]);
+        // data[0] = conv_u24_to_i32(conv_raw_to_u24(input_data, 0));
+        // print_buf_pos += snprintk(print_buf, sizeof(print_buf), "%08x ", data[0]);
 
         for (int i = 1; i < ADS129X_DATA_NUM; i++)
         {
             data[i] = conv_u24_to_i32(conv_raw_to_u24(input_data, i * 3));
-            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9"PRIi32  " ", (data[i]*300)/1000);
+            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9" PRIi32 " ", (data[i] * 300) / 1000);
         }
         LOG_INF("%s", print_buf);
     }
@@ -687,11 +687,6 @@ int16_t ads129x_set_data_rate(uint16_t _data_rate)
     return 0;
 }
 
-uint16_t ads129x_get_data_rate()
-{
-    return ads129x_config.data_rate;
-}
-
 void ads129x_dump_regs()
 {
     uint8_t reg_val = 0;
@@ -751,3 +746,8 @@ ads129x_config_t ads129x_config = {
 };
 
 #endif
+
+uint16_t ads129x_get_data_rate()
+{
+    return ads129x_config.data_rate;
+}

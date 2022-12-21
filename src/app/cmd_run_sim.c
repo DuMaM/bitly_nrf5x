@@ -18,7 +18,7 @@ LOG_MODULE_DECLARE(main);
 K_THREAD_STACK_DEFINE(sim_stack, 4096);
 static struct k_thread sim_thread;
 
-RING_BUF_DECLARE(sim_ring_buffer, 247*4);
+RING_BUF_DECLARE(sim_ring_buffer, ADS129x_DATA_BUFFER_SIZE*5*4);
 static uint32_t bytes_to_send = 0;
 static uint32_t replay_runs = 0;
 
@@ -35,26 +35,27 @@ int32_t sim_load_row_data(uint8_t *load_data, uint32_t* sim_pos) {
 }
 
 
+static uint32_t sim_get_buff_size(uint32_t size) {
+    uint32_t target_frame_size = size > test_params.data_len->tx_max_len - 7 ? test_params.data_len->tx_max_len - 7 : size;
+    if (test_params.fit_buffer) {
+        target_frame_size = utils_roundUp(target_frame_size, ADS129x_DATA_BUFFER_SIZE);
+
+        if (target_frame_size + ADS129x_DATA_BUFFER_SIZE < test_params.data_len->tx_max_len - 7) {
+            target_frame_size += ADS129x_DATA_BUFFER_SIZE;
+        }
+    }
+
+    return target_frame_size;
+}
+
 int32_t sim_get_data(uint8_t *load_data, int32_t size, uint32_t* sim_pos)
 {
     int32_t loaded = 0;
     uint32_t buffer_size = size;
 
-    uint32_t target_frame_size = test_params.data_len->tx_max_len - 7;
-    if (test_params.fit_buffer) {
-        target_frame_size =  ((test_params.data_len->tx_max_len - 7) / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE;
-    }
-
-    //* determine number of data
-    if (size > target_frame_size)
-    {
-        buffer_size = target_frame_size;
-    }
-
-
     while (loaded < buffer_size)
     {
-        loaded += sim_load_row_data(load_data, sim_pos);
+        loaded += sim_load_row_data(load_data + loaded, sim_pos);
     }
 
     return loaded;
@@ -76,26 +77,36 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
     int err = 0;
 
 
-    while (load_data < _bytes_to_send)
+    while (sent_data < _bytes_to_send)
     {
-        remaining = _bytes_to_send - load_data;
-
-        ring_buf_put_claim(&sim_ring_buffer, &tmp_buff, remaining);
-        claimed = sim_get_data(tmp_buff, remaining, &sim_pos);
-        ring_buf_put_finish(&sim_ring_buffer, claimed);
-
-        sent_data = claimed >= test_params.data_len->tx_max_len - 7 ? test_params.data_len->tx_max_len - 7 : claimed;
-        claimed = ring_buf_get_claim(&sim_ring_buffer, &tmp_buff, sent_data);
-        err = bt_performance_test_write(&performance_test, tmp_buff, claimed);
-        if (err)
-        {
-            LOG_ERR("GATT write failed (err %d)", err);
-            break;
+        if (load_data < _bytes_to_send) {
+            remaining = _bytes_to_send - load_data;
+            remaining = sim_get_buff_size(remaining);
+            if (ring_buf_space_get(&sim_ring_buffer) >= remaining) {
+                claimed = ring_buf_put_claim(&sim_ring_buffer, &tmp_buff, remaining);
+                claimed = sim_get_data(tmp_buff, claimed, &sim_pos);
+                err = ring_buf_put_finish(&sim_ring_buffer, claimed);
+                load_data += claimed;
+            }
         }
-        ring_buf_get_finish(&sim_ring_buffer, claimed);
-        load_data += claimed;
+
+        if (sent_data < _bytes_to_send) {
+            remaining = _bytes_to_send - sent_data;
+            remaining = sim_get_buff_size(remaining);
+            if (ring_buf_size_get(&sim_ring_buffer) >= remaining) {
+                claimed = ring_buf_get_claim(&sim_ring_buffer, &tmp_buff, remaining);
+                err = bt_performance_test_write(&performance_test, tmp_buff, claimed);
+                if (err)
+                {
+                    LOG_ERR("GATT write failed (err %d)", err);
+                    break;
+                }
+                ring_buf_get_finish(&sim_ring_buffer, claimed);
+                sent_data += claimed;
+            }
+        }
     }
-    return load_data;
+    return sent_data;
 }
 
 static void sim_test_run()
@@ -110,6 +121,8 @@ static void sim_test_run()
         int64_t delta = 0;
         int64_t stamp = 0;
         int err;
+
+        ring_buf_reset(&sim_ring_buffer);
         err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_SIM);
         if (err)
         {

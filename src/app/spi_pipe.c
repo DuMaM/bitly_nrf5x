@@ -50,6 +50,8 @@ int8_t ads129x_reset_data(void)
 {
     utils_reset_timestamp();
     k_pipe_flush(&ads129x_pipe);
+    ads129x_config.packets_dropped = 0;
+
     return 0;
 }
 

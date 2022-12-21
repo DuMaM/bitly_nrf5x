@@ -24,11 +24,23 @@ struct k_sem cmd_count_writes_num;
 struct k_thread ecg_ble_thread;
 static uint32_t bytes_to_send = 1024;
 
+uint32_t ecg_get_buff_size(uint32_t size)
+{
+    uint32_t target_frame_size = size > test_params.data_len->tx_max_len - 7 ? test_params.data_len->tx_max_len - 7 : size;
+    if (test_params.fit_buffer)
+    {
+        target_frame_size = utils_roundUp(target_frame_size, ADS129x_DATA_BUFFER_SIZE);
+    }
+
+    return target_frame_size;
+}
+
 static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
 {
     uint32_t prog = 0;
     uint8_t *analog_data_ptr = test_data_buffer;
     uint32_t analog_data_size = 0;
+    uint32_t target_frame_size;
     int err = 0;
 
     /*
@@ -39,15 +51,10 @@ static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
     bytes_to_send = set_bytes_to_send(_bytes_to_send);
     LOG_INF("Sending %" PRIu32 " bytes (value after rounding to max packet size)", bytes_to_send);
 
-    uint32_t target_frame_size = test_params.data_len->tx_max_len - 7;
-    if (test_params.fit_buffer)
-    {
-        target_frame_size = ((test_params.data_len->tx_max_len - 7) / ADS129x_DATA_BUFFER_SIZE) * ADS129x_DATA_BUFFER_SIZE;
-    }
-
     while (prog < bytes_to_send)
     {
         analog_data_size = bytes_to_send - prog;
+        target_frame_size = ecg_get_buff_size(analog_data_size);
         if (target_frame_size <= analog_data_size)
         {
             analog_data_size = target_frame_size;

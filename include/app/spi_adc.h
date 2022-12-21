@@ -272,7 +272,7 @@ typedef struct __attribute__((__packed__)) _pipe_packet
     packet_12lead_u leads;
 } pipe_packet_t;
 
-typedef union _pipe_packet_u
+typedef union  __attribute__((__packed__)) _pipe_packet_u
 {
     pipe_packet_t packet;
     uint8_t buffer[sizeof(pipe_packet_t)];
