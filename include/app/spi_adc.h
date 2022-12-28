@@ -346,6 +346,7 @@ int wait_for_finish();
 void ads129x_dump_data(uint8_t *input_data);
 void ads129x_enable_test_signal();
 void ads129x_enable_hrm_signal();
+void ads129x_wct();
 
 typedef struct _ads129x_config
 {

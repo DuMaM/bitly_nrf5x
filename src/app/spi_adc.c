@@ -193,10 +193,10 @@ uint32_t set_bytes_to_send(uint32_t _bytes_to_send)
 }
 
 int ads129x_access(const struct device *_spi,
-                          struct spi_config *_spi_cfg,
-                          uint8_t _cmd,
-                          uint8_t *_data,
-                          uint8_t _len)
+                   struct spi_config *_spi_cfg,
+                   uint8_t _cmd,
+                   uint8_t *_data,
+                   uint8_t _len)
 {
     uint8_t cmd = _cmd;
     uint8_t n = _len - 1;
@@ -575,6 +575,7 @@ void ads129x_setup(void)
 
     ads129x_enable_hrm_signal();
 
+    ads129x_wct();
     gpio_pin_set_dt(&start_spec, 0);
 
     LOG_INF("Device ID: %d", ads129x_get_device_id());
@@ -600,6 +601,19 @@ void ads129x_enable_hrm_signal()
     {
         ads129x_configChannel(i, false, ADS129X_GAIN_4X, ADS129X_MUX_NORMAL);
     }
+}
+
+void ads129x_wct()
+{
+    // 100 = Channel 3 positive input connected to WCTA amplifier
+    ads129x_safe_write_register(ADS129X_REG_WCT1, 1 << ADS129X_BIT_PD_WCTA | 1 << ADS129X_BIT_WCTA2);
+
+    ads129x_safe_write_register(
+        //    011 = Channel 2 negative input connected to WCTB amplifier
+        ADS129X_REG_WCT1,
+        (1 << ADS129X_BIT_PD_WCTB | 1 << ADS129X_BIT_WCTB1 | 1 << ADS129X_BIT_WCTB0) |
+        // 010 = Channel 2 positive input connected to WCTB amplifier
+        (1 << ADS129X_BIT_PD_WCTC | 1 << ADS129X_BIT_WCTC1));
 }
 
 // #########
