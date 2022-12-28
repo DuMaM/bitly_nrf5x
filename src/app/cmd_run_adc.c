@@ -26,10 +26,15 @@ static uint32_t bytes_to_send = 1024;
 
 uint32_t ecg_get_buff_size(uint32_t size)
 {
-    uint32_t target_frame_size = size > test_params.data_len->tx_max_len - 7 ? test_params.data_len->tx_max_len - 7 : size;
+    uint32_t packet_size = test_params.data_len->tx_max_len - 7;
+    uint32_t target_frame_size = size > packet_size ? packet_size : size;
     if (test_params.fit_buffer)
     {
         target_frame_size = utils_roundUp(target_frame_size, ADS129x_DATA_BUFFER_SIZE);
+
+        if (target_frame_size + ADS129x_DATA_BUFFER_SIZE < packet_size) {
+            target_frame_size += ADS129x_DATA_BUFFER_SIZE;
+        }
     }
 
     return target_frame_size;
