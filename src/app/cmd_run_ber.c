@@ -34,6 +34,16 @@ char *bitString(uint8_t n, char *out_bin_string)
     return out_bin_string;
 }
 
+
+uint32_t ber_get_buff_size(uint32_t size)
+{
+    uint32_t packet_size = test_params.data_len->tx_max_len - 7;
+    uint32_t target_frame_size = size > packet_size ? packet_size : size;
+
+    return target_frame_size;
+}
+
+
 int test_run_ber(const struct shell *shell,
                  const uint16_t period_sec,
                  const struct bt_le_conn_param *conn_param,
@@ -45,7 +55,7 @@ int test_run_ber(const struct shell *shell,
     int64_t delta = 0;
     int64_t data = 0;
     uint64_t prog = 0;
-    char pattern_string[7];
+    char pattern_string[10];
     int err;
 
     err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_BER);
@@ -67,7 +77,8 @@ int test_run_ber(const struct shell *shell,
 
     while (delta / 1000 < period_sec)
     {
-        err = bt_performance_test_write(&performance_test, test_data_buffer, test_data_buffer_size);
+        uint32_t size = ber_get_buff_size(test_data_buffer_size);
+        err = bt_performance_test_write(&performance_test, test_data_buffer, size);
         if (err)
         {
             LOG_ERR("GATT write failed (err %d)", err);
