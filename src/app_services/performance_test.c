@@ -13,19 +13,63 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/logging/log.h>
 
 #include <performance_test.h>
-
-#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(bt_performance_test, CONFIG_BT_PERF_TEST_LOG_LEVEL);
 
 static bt_performance_test_metrics_t met;
 static bt_test_type_t test_type;
 static const struct bt_performance_test_cb *callbacks;
+static struct k_work work;
 
 static uint32_t clock_cycles;
 static uint32_t kb;
+
+// crazy buffer
+static uint8_t print_buff[BER_MIN_DATA+42];
+static uint8_t *print_buff_pos = print_buff;
+static uint32_t print_buff_used = 0;
+static bool enable_logs = false;
+
+void cmd_enable_logs(bool should_print) {
+    enable_logs = should_print;
+}
+
+bool cmd_status_logs() {
+    return enable_logs;
+}
+
+void cmd_bt_dump_data(const uint8_t *input_data, uint32_t size)
+{
+    #define DUMP_SIZE 256
+
+    if (enable_logs)
+    {
+        if (input_data)
+        {
+            memcpy(print_buff_pos, input_data, size);
+            print_buff_used += size;
+            print_buff_pos = print_buff + print_buff_used;
+        }
+        else if (print_buff_used)
+        {
+            print_buff_pos = print_buff;
+            uint32_t space_left = 0;
+            while(print_buff_used)
+            {
+                k_usleep(100000);
+                space_left = print_buff_used > DUMP_SIZE ? DUMP_SIZE : print_buff_used;
+                LOG_HEXDUMP_INF(print_buff_pos, space_left,  "BLE Data:");
+                print_buff_pos += space_left;
+                print_buff_used -= space_left;
+            }
+            print_buff_used = 0;
+            print_buff_pos = print_buff;
+        }
+    }
+}
 
 /* callback function fot get data received into get buffer from slave */
 static uint8_t read_fn(struct bt_conn *conn, uint8_t err,
@@ -76,7 +120,13 @@ static ssize_t write_callback(struct bt_conn *conn,
         callbacks->data_received(met_data);
     }
 
+    cmd_bt_dump_data(buf, len);
+
     return len;
+}
+
+static void print_ble_data(struct k_work *item) {
+    cmd_bt_dump_data(NULL, 0);
 }
 
 // sends back metrics data to master
@@ -85,16 +135,16 @@ static ssize_t read_callback(struct bt_conn *conn,
                              uint16_t len, uint16_t offset)
 {
     const bt_performance_test_metrics_t *metrics = attr->user_data;
-
     len = MIN(sizeof(bt_performance_test_metrics_t), len);
 
+    LOG_DBG("Send characteristic data.");
+    ssize_t result = bt_gatt_attr_read(conn, attr, buf, len, offset, attr->user_data, len);
     if (callbacks && callbacks->data_send)
     {
         callbacks->data_send(metrics);
     }
-    LOG_DBG("Send characteristic data.");
-
-    return bt_gatt_attr_read(conn, attr, buf, len, offset, attr->user_data, len);
+    k_work_submit(&work);
+    return result;
 }
 
 // saves data which was send from master to slave
@@ -163,6 +213,9 @@ int bt_performance_test_init(struct bt_performance_test *performance_test, struc
 
     callbacks = cb;
 
+    k_work_init(&work, print_ble_data);
+
+
     return 0;
 }
 
@@ -214,7 +267,7 @@ int bt_performance_test_handles_assign(struct bt_gatt_dm *dm,
     return 0;
 }
 
-// slave -> master
+// master -> slave -> master
 int bt_performance_test_read(struct bt_performance_test *performance_test)
 {
     int err;
@@ -237,6 +290,7 @@ int bt_performance_test_read(struct bt_performance_test *performance_test)
 int bt_performance_test_write(struct bt_performance_test *performance_test,
                               const uint8_t *data, uint16_t len)
 {
+    cmd_bt_dump_data(data, len);
     return bt_gatt_write_without_response_cb(performance_test->conn,
                                              performance_test->char_handle,
                                              data, len, false,

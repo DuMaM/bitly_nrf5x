@@ -112,6 +112,8 @@ ads129x_config_t ads129x_config = {
         .frequency = ADS129X_SPI_CLOCK_SPEED,
         .operation = SPI_OP_MODE_MASTER | SPI_MODE_CPHA | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
         .cs = &ads129x_cs_ctrl},
+    .packets_dropped = 0,
+
 };
 
 // checks
@@ -191,10 +193,10 @@ uint32_t set_bytes_to_send(uint32_t _bytes_to_send)
 }
 
 int ads129x_access(const struct device *_spi,
-                          struct spi_config *_spi_cfg,
-                          uint8_t _cmd,
-                          uint8_t *_data,
-                          uint8_t _len)
+                   struct spi_config *_spi_cfg,
+                   uint8_t _cmd,
+                   uint8_t *_data,
+                   uint8_t _len)
 {
     uint8_t cmd = _cmd;
     uint8_t n = _len - 1;
@@ -473,13 +475,13 @@ void ads129x_dump_data(uint8_t *input_data)
         uint8_t print_buf_pos = 0;
         memset(data, 0, sizeof(data));
 
-        //data[0] = conv_u24_to_i32(conv_raw_to_u24(input_data, 0));
-        //print_buf_pos += snprintk(print_buf, sizeof(print_buf), "%08x ", data[0]);
+        // data[0] = conv_u24_to_i32(conv_raw_to_u24(input_data, 0));
+        // print_buf_pos += snprintk(print_buf, sizeof(print_buf), "%08x ", data[0]);
 
         for (int i = 1; i < ADS129X_DATA_NUM; i++)
         {
             data[i] = conv_u24_to_i32(conv_raw_to_u24(input_data, i * 3));
-            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9"PRIi32  " ", (data[i]*300)/1000);
+            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9" PRIi32 " ", (data[i] * 300) / 1000);
         }
         LOG_INF("%s", print_buf);
     }
@@ -571,18 +573,68 @@ void ads129x_setup(void)
      */
     ads129x_safe_write_register(ADS129X_REG_CONFIG3, (1 << ADS129X_BIT_PD_REFBUF) + (1 << 6));
 
-    // setup channels
-    ads129x_configChannel(1, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
-    ads129x_configChannel(2, false, ADS129X_GAIN_12X, ADS129X_MUX_NORMAL);
-    for (int i = 3; i <= 8; i++)
-    {
-        ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_SHORT);
-    }
+    ads129x_enable_hrm_signal();
 
+    ads129x_wct();
     gpio_pin_set_dt(&start_spec, 0);
 
     LOG_INF("Device ID: %d", ads129x_get_device_id());
     ads129x_dump_regs();
+}
+
+void ads129x_enable_test_signal()
+{
+    // test mode
+    ads129x_safe_write_register(ADS129X_REG_CONFIG2, ADS129X_TEST_FREQ_2HZ | 1 << ADS129X_BIT_TEST_AMP | 1 << ADS129X_BIT_INT_TEST);
+    for (int i = 1; i <= 8; i++)
+    {
+        ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_TEST);
+    }
+}
+
+void ads129x_enable_hrm_signal()
+{
+    // test mode
+    ads129x_safe_write_register(ADS129X_REG_CONFIG2, 0);
+
+    for (int i = 1; i <= 8; i++)
+    {
+        ads129x_configChannel(i, false, ADS129X_GAIN_6X, ADS129X_MUX_NORMAL);
+    }
+}
+
+void ads129x_enable_external_test()
+{
+    // test mode
+    ads129x_safe_write_register(ADS129X_REG_CONFIG2, 0);
+
+    for (int i = 1; i <= 8; i++)
+    {
+        ads129x_configChannel(i, false, ADS129X_GAIN_2X, ADS129X_MUX_NORMAL);
+    }
+}
+
+void ads129x_enable_supply_voltage_test()
+{
+    // test mode
+    ads129x_safe_write_register(ADS129X_REG_CONFIG2,  ADS129X_TEST_FREQ_DC << ADS129X_BIT_TEST_AMP | 1 << ADS129X_BIT_INT_TEST);
+    for (int i = 1; i <= 8; i++)
+    {
+        ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_MVDD);
+    }
+}
+
+void ads129x_wct()
+{
+    // 100 = Channel 3 positive input connected to WCTA amplifier
+    ads129x_safe_write_register(ADS129X_REG_WCT1, 1 << ADS129X_BIT_PD_WCTA | 1 << ADS129X_BIT_WCTA2);
+
+    ads129x_safe_write_register(
+        //    011 = Channel 2 negative input connected to WCTB amplifier
+        ADS129X_REG_WCT1,
+        (1 << ADS129X_BIT_PD_WCTB | 1 << ADS129X_BIT_WCTB1 | 1 << ADS129X_BIT_WCTB0) |
+        // 010 = Channel 2 positive input connected to WCTB amplifier
+        (1 << ADS129X_BIT_PD_WCTC | 1 << ADS129X_BIT_WCTC1));
 }
 
 // #########
@@ -622,8 +674,6 @@ void ads129x_data_enable()
     ads129x_rdatac();
     LOG_INF("Data transfer enabled");
     ecg_status = true;
-
-    ads129x_reset_data();
 }
 
 void ads129x_data_disable()
@@ -633,6 +683,11 @@ void ads129x_data_disable()
     ads129x_stop();
     LOG_INF("Data transfer disabled");
     ecg_status = false;
+
+    if (ads129x_config.packets_dropped)
+    {
+        LOG_ERR("SPI dropped %" PRIu32 " packets of %d size", ads129x_config.packets_dropped, ADS129x_DATA_BUFFER_SIZE);
+    }
 }
 
 bool ads129x_get_status()
@@ -665,11 +720,6 @@ int16_t ads129x_set_data_rate(uint16_t _data_rate)
 
     ads129x_config.data_rate = _data_rate;
     return 0;
-}
-
-uint16_t ads129x_get_data_rate()
-{
-    return ads129x_config.data_rate;
 }
 
 void ads129x_dump_regs()
@@ -721,4 +771,18 @@ void ads129x_load_augmented_leads(uint8_t *buffer)
     conv_u24_to_raw(ads129x_get_aVF(lead1, lead2), buffer, ADS129x_AVF_OFFSET);
 }
 
+#else
+
+ads129x_config_t ads129x_config = {
+    .data_rate = 2000,
+    .bytes_to_send = 0,
+    .print_data = false,
+    .packets_dropped = 0,
+};
+
 #endif
+
+uint16_t ads129x_get_data_rate()
+{
+    return ads129x_config.data_rate;
+}

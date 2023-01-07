@@ -272,7 +272,7 @@ typedef struct __attribute__((__packed__)) _pipe_packet
     packet_12lead_u leads;
 } pipe_packet_t;
 
-typedef union _pipe_packet_u
+typedef union  __attribute__((__packed__)) _pipe_packet_u
 {
     pipe_packet_t packet;
     uint8_t buffer[sizeof(pipe_packet_t)];
@@ -343,12 +343,17 @@ void ads129x_load_augmented_leads(uint8_t *buffer);
 
 uint32_t set_bytes_to_send(uint32_t _bytes_to_send);
 int wait_for_finish();
+void ads129x_dump_data(uint8_t *input_data);
+void ads129x_enable_test_signal();
+void ads129x_enable_hrm_signal();
+void ads129x_wct();
 
 typedef struct _ads129x_config
 {
     uint32_t bytes_to_send;
     uint16_t data_rate;
     bool print_data;
+    uint32_t packets_dropped;
 
     const struct device *ads129x_spi;
     struct spi_config ads129x_spi_cfg;

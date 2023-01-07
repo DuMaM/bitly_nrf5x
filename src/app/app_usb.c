@@ -27,35 +27,31 @@
 
 LOG_MODULE_DECLARE(main);
 
-#ifdef CONFIG_BOARD_PARTICLE_XENON
-
 void app_usb_init(void)
 {
     int ret = 0;
 
-    ret = usb_enable(NULL);
-    if (ret != 0)
-    {
-        LOG_ERR("Failed to enable USB");
-        return;
-    }
+#if DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_shell_uart), zephyr_cdc_acm_uart)
 
     while (!device_is_ready(DEVICE_DT_GET(DT_CHOSEN(zephyr_console))))
     {
         k_sleep(K_MSEC(100));
-        LOG_ERR("CDC ACM device for console is not ready");
+        //LOG_ERR("CDC ACM device for console is not ready");
     }
 
     while (!device_is_ready(DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart))))
     {
         k_sleep(K_MSEC(100));
-        LOG_ERR("CDC ACM device for shell is not ready");
+        //LOG_ERR("CDC ACM device for shell is not ready");
+    }
+
+    ret = usb_enable(NULL);
+    if (ret != 0)
+    {
+        //LOG_ERR("Failed to enable USB");
+        return;
     }
 
     LOG_INF("Usb CDC ACM successfully enabled");
-}
-#else
-void app_usb_init(void)
-{
-}
 #endif
+}

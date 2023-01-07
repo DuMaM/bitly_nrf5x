@@ -1,15 +1,15 @@
 &uart0 {
     /delete-property/ rts-pin;
     /delete-property/ cts-pin;
+    status = "disabled";
 };
 
 zephyr_udc0: &usbd {
     compatible = "nordic,nrf-usbd";
     status = "okay";
-    cdc_acm_0: cdc_acm_uart0 {
-        current-speed = <230400>;
+    cdc_acm_uart0: cdc_acm_uart0 {
+        status = "okay";
         compatible = "zephyr,cdc-acm-uart";
-        label = "CDC_ACM_0";
     };
 };
 
@@ -30,6 +30,7 @@ feather_i2c: &i2c0 {
 		};
 	};
 };
+
 
 nrf53_spi: &spi1 { /* feather SPI */
 	compatible = "nordic,nrf-spim";
@@ -63,7 +64,7 @@ nrf53_spi: &spi1 { /* feather SPI */
     };
 
     chosen {
-        zephyr,console = &cdc_acm_0;
-        zephyr,shell-uart = &cdc_acm_0;
+        zephyr,console = &cdc_acm_uart0;
+        zephyr,shell-uart = &cdc_acm_uart0;
     };
 };

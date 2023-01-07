@@ -12,7 +12,7 @@
 
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
-static int64_t stamp;
+static uint32_t replay_runs = 0;
 
 LOG_MODULE_DECLARE(main);
 
@@ -24,11 +24,28 @@ struct k_sem cmd_count_writes_num;
 struct k_thread ecg_ble_thread;
 static uint32_t bytes_to_send = 1024;
 
+uint32_t ecg_get_buff_size(uint32_t size)
+{
+    uint32_t packet_size = test_params.data_len->tx_max_len - 7;
+    uint32_t target_frame_size = size > packet_size ? packet_size : size;
+    if (test_params.fit_buffer)
+    {
+        target_frame_size = utils_roundUp(target_frame_size, ADS129x_DATA_BUFFER_SIZE);
+
+        if (target_frame_size + ADS129x_DATA_BUFFER_SIZE < packet_size) {
+            target_frame_size += ADS129x_DATA_BUFFER_SIZE;
+        }
+    }
+
+    return target_frame_size;
+}
+
 static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
 {
     uint32_t prog = 0;
     uint8_t *analog_data_ptr = test_data_buffer;
     uint32_t analog_data_size = 0;
+    uint32_t target_frame_size;
     int err = 0;
 
     /*
@@ -37,13 +54,15 @@ static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
      * otherwise we should ignore it
      */
     bytes_to_send = set_bytes_to_send(_bytes_to_send);
-    LOG_INF("Sending %"PRIu32" bytes (value after rounding to max packet size)", bytes_to_send);
+    LOG_INF("Sending %" PRIu32 " bytes (value after rounding to max packet size)", bytes_to_send);
 
     while (prog < bytes_to_send)
     {
         analog_data_size = bytes_to_send - prog;
-        if (test_params.data_len->tx_max_len - 7 <= analog_data_size) {
-            analog_data_size = test_params.data_len->tx_max_len - 7;
+        target_frame_size = ecg_get_buff_size(analog_data_size);
+        if (target_frame_size <= analog_data_size)
+        {
+            analog_data_size = target_frame_size;
         }
 
         /*
@@ -67,69 +86,87 @@ static uint32_t send_test_ecg_data(uint32_t _bytes_to_send)
             continue;
         }
 
+        // if (!k_sem_take(&cmd_count_writes_num, K_FOREVER)) {
+        err = bt_performance_test_write(&performance_test, analog_data_ptr, analog_data_size);
+        if (err)
+        {
+            LOG_ERR("GATT write failed (err %d)", err);
+            break;
+        }
+        prog += analog_data_size;
 
-        //if (!k_sem_take(&cmd_count_writes_num, K_FOREVER)) {
-            err = bt_performance_test_write(&performance_test, analog_data_ptr, analog_data_size);
-            if (err)
-            {
-                LOG_ERR("GATT write failed (err %d)", err);
-                break;
-            }
-
-            prog += analog_data_size;
         //}
     }
     return prog;
 }
 
-void notify_packet_sent(struct bt_conn *conn, void *user_data) {
+void notify_packet_sent(struct bt_conn *conn, void *user_data)
+{
     k_sem_give(&cmd_count_writes_num);
 }
 
-
 static void adc_test_run()
-{
-    int64_t delta;
-    uint32_t prog = 0;
-
-    // add callback to monitor data sent and reset data
-    extern struct bt_performance_test_cb performance_test_cb;
-    //performance_test_cb.package_sent = &notify_packet_sent;
-    k_sem_init(&cmd_count_writes_num, 2, 2);
-
-    // start transmission
-    stamp = k_uptime_get_32();
-    prog = send_test_ecg_data(bytes_to_send);
-    delta = k_uptime_delta(&stamp);
-
-    ads129x_print(false);
-    LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
-
-    /* read back char from peer */
-    int err = bt_performance_test_read(&performance_test);
-    if (err)
-    {
-        LOG_ERR("GATT read failed (err %d)", err);
-        return;
-    }
-
-    k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
-
-    // clean after tests
-    ads129x_data_disable();
-    performance_test_cb.package_sent = NULL;
-
-    //instruction_print();
-
-    return;
-}
-
-int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
 {
     const struct bt_le_conn_param *conn_param = test_params.conn_param;
     const struct bt_conn_le_phy_param *phy = test_params.phy;
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
 
+    while (replay_runs--)
+    {
+        int64_t delta;
+        int64_t stamp;
+        uint32_t prog = 0;
+        int err = 0;
+
+        // allow to return from shell
+        /* get cycle stamp */
+        LOG_INF("=== Reseting data buffer ===");
+        ads129x_data_enable();
+        LOG_INF("=== Start analog data transfer ===");
+        k_usleep(500);
+
+        err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_ANALOG);
+        if (err)
+        {
+            LOG_ERR("GATT read failed (err %d)", err);
+            return;
+        }
+
+        // add callback to monitor data sent and reset data
+        extern struct bt_performance_test_cb performance_test_cb;
+        // performance_test_cb.package_sent = &notify_packet_sent;
+        k_sem_init(&cmd_count_writes_num, 2, 2);
+        ads129x_reset_data();
+
+        // start transmission
+        stamp = k_uptime_get_32();
+        prog = send_test_ecg_data(bytes_to_send);
+        delta = k_uptime_delta(&stamp);
+
+        /* read back char from peer */
+        err = bt_performance_test_read(&performance_test);
+        if (err)
+        {
+            LOG_ERR("GATT read failed (err %d)", err);
+            return;
+        }
+
+        k_sem_take(&cmd_sync_sem, PERF_TEST_CONFIG_TIMEOUT);
+
+        LOG_INF("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps", prog, prog / 1024, delta, ((uint64_t)prog * 8 / delta));
+        cmd_bt_dump_data(NULL, 0);
+
+        // clean after tests
+        ads129x_data_disable();
+        performance_test_cb.package_sent = NULL;
+
+        // instruction_print();
+    }
+    return;
+}
+
+int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
+{
     if (argc == 1)
     {
         shell_help(shell);
@@ -137,42 +174,33 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
         return SHELL_CMD_HELP_PRINTED;
     }
 
-    if (argc > 2)
+    if (argc > 3)
     {
         shell_error(shell, "%s: bad parameters count", argv[0]);
         return -EINVAL;
     }
 
     bytes_to_send = strtoul(argv[1], NULL, 10);
-    if (ADS129x_DATA_BUFFER_SIZE > bytes_to_send)
+    if (ADS129x_DATA_BUFFER_SIZE > bytes_to_send && (bytes_to_send < BER_MIN_DATA && cmd_status_logs()))
     {
-        shell_error(shell, "Invalid parameter %" PRIu8 ", it should be bigger then max data send from spi device", bytes_to_send);
+        shell_error(shell, "Invalid parameter %" PRIu32 ", it should be bigger then max data send from spi device", bytes_to_send);
         return -EINVAL;
     }
 
-    LOG_DBG("Data read speed: %"PRIu32, bytes_to_send);
+    LOG_DBG("Data read speed: %" PRIu32, bytes_to_send);
 
-    // allow to return from shell
-    /* get cycle stamp */
-    LOG_INF("=== Reseting data buffer ===");
-    ads129x_data_enable();
-    ads129x_print(true);
-    LOG_INF("=== Start analog data transfer ===");
-    k_usleep(500);
-
-    int err = test_init(conn_param, phy, data_len, BT_TEST_TYPE_ANALOG);
-    if (err)
+    replay_runs = 1;
+    if (argc == 3)
     {
-        LOG_ERR("GATT read failed (err %d)", err);
-        return 0;
+        replay_runs = strtol(argv[2], NULL, 10);
     }
 
     /* initialize work item for test */
     k_tid_t my_tid = k_thread_create(&ecg_ble_thread, ecg_ble_stack,
-                                    K_THREAD_STACK_SIZEOF(ecg_ble_stack),
-                                    adc_test_run,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                                     K_THREAD_STACK_SIZEOF(ecg_ble_stack),
+                                     adc_test_run,
+                                     NULL, NULL, NULL,
+                                     SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     k_thread_name_set(my_tid, "cmd_adc");
 

@@ -28,7 +28,7 @@ K_SEM_DEFINE(bt_test_config_phy_sem, 0, 1);
 K_SEM_DEFINE(bt_test_config_int_sem, 0, 1);
 
 static volatile bool test_ready = false;
-struct bt_conn *default_conn = NULL;
+static struct bt_conn *default_conn = NULL;
 static struct bt_uuid *uuid128 = BT_UUID_PERF_TEST;
 static struct bt_gatt_exchange_params exchange_params = {0};
 static struct bt_le_conn_param *conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, 0, 400);
@@ -512,6 +512,46 @@ int connection_configuration_set()
     return 0;
 }
 
+static const char *ver_str(uint8_t ver)
+{
+	const char * const str[] = {
+		"1.0b", "1.1", "1.2", "2.0", "2.1", "3.0", "4.0", "4.1", "4.2",
+		"5.0", "5.1", "5.2", "5.3"
+	};
+
+	if (ver < ARRAY_SIZE(str)) {
+		return str[ver];
+	}
+
+	return "unknown";
+}
+
+static void remote_info_available(struct bt_conn *conn,
+				  struct bt_conn_remote_info *remote_info)
+{
+	struct bt_conn_info info;
+
+	bt_conn_get_info(conn, &info);
+
+	if (IS_ENABLED(CONFIG_BT_REMOTE_VERSION)) {
+		LOG_INF("Remote LMP version %s (0x%02x) subversion 0x%04x "
+			    "manufacturer 0x%04x", ver_str(remote_info->version),
+			    remote_info->version, remote_info->subversion,
+			    remote_info->manufacturer);
+	}
+
+	if (info.type == BT_CONN_TYPE_LE) {
+		uint8_t features[8];
+		char features_str[2 * sizeof(features) +  1];
+
+		sys_memcpy_swap(features, remote_info->le.features,
+				sizeof(features));
+		bin2hex(features, sizeof(features),
+			features_str, sizeof(features_str));
+		LOG_INF("LE Features: 0x%s ", features_str);
+	}
+}
+
 void bt_init(void)
 {
     int err = -1;
@@ -521,6 +561,7 @@ void bt_init(void)
         .disconnected = disconnected,
         .le_param_req = le_param_req,
         .le_param_updated = le_param_updated,
+        .remote_info_available = remote_info_available,
         .le_phy_updated = le_phy_updated,
         .le_data_len_updated = le_data_length_updated};
 
@@ -535,5 +576,14 @@ void bt_init(void)
     bt_conn_cb_register(&conn_callbacks);
     LOG_INF("Bluetooth initialized");
 
+    err = bt_performance_test_init(&performance_test, &performance_test_cb);
+    if (err)
+    {
+        LOG_ERR("Performance test service initialization failed.");
+    }
+
     scan_init();
+
+    //k_sys_work_q
+    adv_start();
 }

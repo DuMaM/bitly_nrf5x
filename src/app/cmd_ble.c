@@ -4,11 +4,16 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+
 #include <cmd.h>
 #include <main.h>
 #include <bt_test.h>
+#include <performance_test.h>
 
-#include <zephyr/kernel.h>
+#include <app_utils.h>
+LOG_MODULE_DECLARE(main);
 
 K_THREAD_STACK_DEFINE(config_stack, 1024);
 struct k_thread config_thread;
@@ -17,9 +22,9 @@ test_params_t test_params = {
     // BT_LE_CONNECTION IS A WORKAROUND ON CHECKING MULTIPLE PARAM NEGOTIATION
     .conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT),
     .phy = BT_CONN_LE_PHY_PARAM_2M,
-    .data_len = BT_CONN_LE_DATA_LEN_PARAM(251,1064),
-    .enable_rssi = true,
-};
+    .data_len = BT_CONN_LE_DATA_LEN_PARAM(251, 1064),
+    .fit_buffer = true,
+    .enable_rssi = true};
 
 static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
 {
@@ -31,10 +36,10 @@ static int cmd_phy_1m(const struct shell *shell, size_t argc, char **argv)
 
     /* initialize work item for test */
     k_thread_create(&config_thread, config_stack,
-                                    K_THREAD_STACK_SIZEOF(config_stack),
-                                    config_update_phy,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    config_update_phy,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -49,10 +54,10 @@ static int cmd_phy_2m(const struct shell *shell, size_t argc, char **argv)
 
     /* initialize work item for test */
     k_thread_create(&config_thread, config_stack,
-                                    K_THREAD_STACK_SIZEOF(config_stack),
-                                    config_update_phy,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    config_update_phy,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -68,10 +73,10 @@ static int cmd_phy_coded_s2(const struct shell *shell, size_t argc, char **argv)
 
     /* initialize work item for test */
     k_thread_create(&config_thread, config_stack,
-                                    K_THREAD_STACK_SIZEOF(config_stack),
-                                    config_update_phy,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    config_update_phy,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -92,10 +97,10 @@ static int cmd_phy_coded_s8(const struct shell *shell, size_t argc, char **argv)
 
     /* initialize work item for test */
     k_thread_create(&config_thread, config_stack,
-                                    K_THREAD_STACK_SIZEOF(config_stack),
-                                    config_update_phy,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    config_update_phy,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -137,10 +142,10 @@ static int cmd_data_len(const struct shell *shell, size_t argc, char **argv)
 
     /* initialize work item for test */
     k_thread_create(&config_thread, config_stack,
-                                    K_THREAD_STACK_SIZEOF(config_stack),
-                                    config_update_len,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    config_update_len,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -176,10 +181,10 @@ static int cmd_data_timing(const struct shell *shell, size_t argc, char **argv)
 
     /* initialize work item for test */
     k_thread_create(&config_thread, config_stack,
-                                    K_THREAD_STACK_SIZEOF(config_stack),
-                                    config_update_len,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    config_update_len,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -221,10 +226,10 @@ static int cmd_conn_interval(const struct shell *shell, size_t argc, char **argv
     shell_print(shell, "Connection interval set to: %d", interval);
 
     k_thread_create(&config_thread, config_stack,
-                                    K_THREAD_STACK_SIZEOF(config_stack),
-                                    config_update_param,
-                                    NULL, NULL, NULL,
-                                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    config_update_param,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
 
     return 0;
 }
@@ -256,14 +261,68 @@ static int rssi_cmd(const struct shell *shell, size_t argc, char **argv)
     return 0;
 }
 
+static int config_data_dump(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc == 1)
+    {
+        shell_help(shell);
+        return SHELL_CMD_HELP_PRINTED;
+    }
+
+    if (argc > 2)
+    {
+        shell_error(shell, "%s: bad parameters count", argv[0]);
+        return -EINVAL;
+    }
+
+    int8_t data_dump = atob(argv[1]);
+    if (data_dump < 0)
+    {
+        shell_error(shell, "Invalid parameter try true/yes/y/1 or false/no/n/0");
+        return -EINVAL;
+    }
+
+    shell_print(shell, "Data dump is: %s", data_dump > 0 ? "enabled" : "disabled");
+    cmd_enable_logs(data_dump > 0);
+
+    return 0;
+}
+
+static int config_fit_buff(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc == 1)
+    {
+        shell_help(shell);
+        return SHELL_CMD_HELP_PRINTED;
+    }
+
+    if (argc > 2)
+    {
+        shell_error(shell, "%s: bad parameters count", argv[0]);
+        return -EINVAL;
+    }
+
+    int8_t fit_buff = atob(argv[1]);
+    if (fit_buff < 0)
+    {
+        shell_error(shell, "Invalid parameter try true/yes/y/1 or false/no/n/0");
+        return -EINVAL;
+    }
+
+    shell_print(shell, "Fit buff is: %s", fit_buff > 0 ? "enabled" : "disabled");
+    test_params.fit_buffer = fit_buff > 0;
+
+    return 0;
+}
+
 static int print_cmd(const struct shell *shell, size_t argc,
                      char **argv)
 {
-    shell_print(shell,  "==== Current test configuration ====\n");
-    shell_print(shell,  "Data length:\t\t%d\n"
-                        "Data time:\t\t%d\n"
-                        "Connection interval:\t%d units (ms %d)\n"
-                        "Preferred PHY:\t\t%s\n",
+    shell_print(shell, "==== Current test configuration ====\n");
+    shell_print(shell, "Data length:\t\t%d\n"
+                       "Data time:\t\t%d\n"
+                       "Connection interval:\t%d units (ms %d)\n"
+                       "Preferred PHY:\t\t%s\n",
                 test_params.data_len->tx_max_len,
                 test_params.data_len->tx_max_time,
                 test_params.conn_param->interval_min,
@@ -271,6 +330,42 @@ static int print_cmd(const struct shell *shell, size_t argc,
                 phy_str(test_params.phy));
     return 0;
 }
+
+// add connect command
+static int set_role_to_slave(const struct shell *shell, size_t argc, char **argv)
+{
+    shell_print(shell, "\nSlave role.\n");
+
+    /* initialize work item for test */
+    k_thread_create(&config_thread, config_stack,
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    adv_start,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+
+    return 0;
+}
+
+static int set_role_to_master(const struct shell *shell, size_t argc, char **argv)
+{
+    shell_print(shell, "\nMaster role.\n");
+    restore_state();
+
+    /* initialize work item for test */
+    k_thread_create(&config_thread, config_stack,
+                    K_THREAD_STACK_SIZEOF(config_stack),
+                    scan_start,
+                    NULL, NULL, NULL,
+                    SHELL_TEST_RUN_PRIO, 0, K_NO_WAIT);
+
+    return 0;
+}
+
+SHELL_STATIC_SUBCMD_SET_CREATE(sub_role,
+                               SHELL_CMD(master, NULL, "Set master role - start listening for input", set_role_to_master),
+                               SHELL_CMD(slave, NULL, "Set slave role - start advertising", set_role_to_slave),
+                               SHELL_SUBCMD_SET_END);
+
 
 SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
                                SHELL_CMD(1M, NULL, "Set preferred PHY to 1Mbps", cmd_phy_1m),
@@ -284,12 +379,15 @@ SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
                                SHELL_SUBCMD_SET_END);
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
+                               SHELL_CMD(connect, &sub_role, "Establish connection and set device role", default_cmd),
                                SHELL_CMD(data_length, NULL, "Configure data length", cmd_data_len),
                                SHELL_CMD(data_time, NULL, "Configure data frame timing", cmd_data_timing),
                                SHELL_CMD(conn_interval, NULL, "Configure connection interval <1.25ms units>", cmd_conn_interval),
-                               SHELL_CMD(phy, &phy_sub, "Configure connection interval", default_cmd),
-                               SHELL_CMD(rssi, NULL, "RSSI configuration y/n", rssi_cmd),
+                               SHELL_CMD(phy, &phy_sub, "Configure phy used by device ", default_cmd),
+                              // SHELL_CMD(rssi, NULL, "RSSI configuration y/n", rssi_cmd),
+                               SHELL_CMD(raw, NULL, "Print ble data", config_data_dump),
+                               SHELL_CMD(fit, NULL, "Always fit buffer with ble data", config_fit_buff),
                                SHELL_CMD(print, NULL, "Print current configuration", print_cmd),
                                SHELL_SUBCMD_SET_END);
 
-SHELL_CMD_REGISTER(config, &sub_config, "Configure testing parameters", default_cmd);
+SHELL_CMD_REGISTER(ble, &sub_config, "Sets up BLE testing parameters", default_cmd);

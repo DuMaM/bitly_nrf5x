@@ -18,7 +18,6 @@
 LOG_MODULE_DECLARE(main);
 K_SEM_DEFINE(cmd_sync_sem, 0, 1);
 
-extern struct bt_conn *default_conn;
 /* a test_data_buffer data buffer */
 uint8_t test_data_buffer[502];
 const uint16_t test_data_buffer_size = sizeof(test_data_buffer) / sizeof(test_data_buffer[0]);
@@ -122,44 +121,6 @@ static void performance_test_received(const bt_performance_test_metrics_t *met)
     // }
 }
 
-
-static void performance_test_sent(struct bt_conn *conn, void *user_data)
-{
-
-
-	// static uint32_t cycle_stamp;
-	// uint64_t delta;
-
-	// delta = k_cycle_get_32() - cycle_stamp;
-	// delta = k_cyc_to_ns_floor64(delta);
-
-	// /* if last data rx-ed was greater than 1 second in the past,
-	//  * reset the metrics.
-	//  */
-	// if (delta > (1U * NSEC_PER_SEC)) {
-	// 	printk("%s: count= %u, len= %u, rate= %u bps.\n", __func__,
-	// 	       write_count, write_len, write_rate);
-
-	// 	last_write_rate = write_rate;
-
-	// 	write_count = 0U;
-	// 	write_len = 0U;
-	// 	write_rate = 0U;
-	// 	cycle_stamp = k_cycle_get_32();
-	// } else {
-	// 	uint16_t len;
-
-	// 	write_count++;
-
-	// 	/* Extract the 16-bit data length stored in user_data */
-	// 	len = (uint32_t)user_data & 0xFFFF;
-
-	// 	write_len += len;
-	// 	write_rate = ((uint64_t)write_len << 3) * (1U * NSEC_PER_SEC) /
-	// 		     delta;
-	// }
-}
-
 /**
  * @brief Executed when data is sended back to master
  *
@@ -183,13 +144,6 @@ int test_init(const struct bt_le_conn_param *conn_param,
               const bt_test_type_t type)
 {
     int err;
-
-    err = bt_performance_test_init(&performance_test, &performance_test_cb);
-    if (err)
-    {
-        LOG_ERR("Performance test service initialization failed.");
-        return -EFAULT;
-    }
 
     if (!getSettings())
     {
@@ -223,9 +177,9 @@ int test_init(const struct bt_le_conn_param *conn_param,
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_bt_test,
                                SHELL_CMD(ber_alt, NULL, "Tests ber signal with pattern |11|00|11|00", test_run_ber_alternating_cmd),
-                               SHELL_CMD(ber_oppsed, NULL, "Tests ber signal with pattern |10|10|10|10", test_run_ber_oppsed_cmd),
-                               SHELL_CMD(sim, NULL, "Tests with simulated ECC signal", sim_run_cmd),
-                               SHELL_CMD(analog, NULL, "Tests with ECC signal", adc_run_cmd),
+                               SHELL_CMD(ber_const, NULL, "Tests ber signal with pattern |10|10|10|10", test_run_ber_oppsed_cmd),
+                               SHELL_CMD(sim, NULL, "Tests with simulated ECG signal", sim_run_cmd),
+                               SHELL_CMD(analog, NULL, "Tests with ECG signal", adc_run_cmd),
                                SHELL_CMD(test_picture, NULL, "Tests transition with example picture", test_run_cmd),
                                SHELL_SUBCMD_SET_END);
 
