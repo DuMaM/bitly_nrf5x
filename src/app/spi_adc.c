@@ -481,7 +481,7 @@ void ads129x_dump_data(uint8_t *input_data)
         for (int i = 1; i < ADS129X_DATA_NUM; i++)
         {
             data[i] = conv_u24_to_i32(conv_raw_to_u24(input_data, i * 3));
-            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9" PRIi32 " ", (data[i] * 300) / 1000);
+            print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9" PRIi32 " ", data[i] / 1000);
         }
         LOG_INF("%s", print_buf);
     }
@@ -571,12 +571,13 @@ void ads129x_setup(void)
      * enable internal reference
      * this free bit is a previous reserved value
      */
+    // 0 << ADS129X_BIT_VREF_4V
     ads129x_safe_write_register(ADS129X_REG_CONFIG3, (1 << ADS129X_BIT_PD_REFBUF) + (1 << 6));
 
     ads129x_enable_hrm_signal();
 
     ads129x_wct();
-    gpio_pin_set_dt(&start_spec, 0);
+    gpio_pin_set_dt(&start_spec, 1);
 
     LOG_INF("Device ID: %d", ads129x_get_device_id());
     ads129x_dump_regs();
@@ -588,7 +589,7 @@ void ads129x_enable_test_signal()
     ads129x_safe_write_register(ADS129X_REG_CONFIG2, ADS129X_TEST_FREQ_2HZ | 1 << ADS129X_BIT_TEST_AMP | 1 << ADS129X_BIT_INT_TEST);
     for (int i = 1; i <= 8; i++)
     {
-        ads129x_configChannel(i, false, ADS129X_GAIN_1X, ADS129X_MUX_TEST);
+        ads129x_configChannel(i, false, ADS129X_GAIN_6X, ADS129X_MUX_TEST);
     }
 }
 
@@ -610,7 +611,7 @@ void ads129x_enable_external_test()
 
     for (int i = 1; i <= 8; i++)
     {
-        ads129x_configChannel(i, false, ADS129X_GAIN_2X, ADS129X_MUX_NORMAL);
+        ads129x_configChannel(i, false, ADS129X_GAIN_6X, ADS129X_MUX_NORMAL);
     }
 }
 
