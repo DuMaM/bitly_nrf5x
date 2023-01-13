@@ -81,7 +81,7 @@ static int ecg_set_channels(const struct shell *shell, size_t argc, char **argv)
         return SHELL_CMD_HELP_PRINTED;
     }
 
-    if (argc > 2)
+    if (argc > 3)
     {
         shell_error(shell, "%s: bad parameters count", argv[0]);
         return -EINVAL;
@@ -89,7 +89,12 @@ static int ecg_set_channels(const struct shell *shell, size_t argc, char **argv)
 
     bool result = atob(argv[1]);
     if (result) {
-        ads129x_enable_test_signal();
+        result = atob(argv[2]);
+        if (result) {
+            ads129x_enable_test_signal();
+        } else {
+            ads129x_enable_external_test();
+        }
     }else {
         ads129x_enable_hrm_signal();
     }
