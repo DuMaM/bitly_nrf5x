@@ -86,6 +86,11 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
                 claimed = ring_buf_put_claim(&sim_ring_buffer, &tmp_buff, remaining);
                 claimed = sim_get_data(tmp_buff, claimed, &sim_pos);
                 err = ring_buf_put_finish(&sim_ring_buffer, claimed);
+                if (err)
+                {
+                    LOG_ERR("Unable to claim buffer (err %d)", err);
+                    break;
+                }
                 load_data += claimed;
             }
         }
@@ -101,7 +106,12 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
                     LOG_ERR("GATT write failed (err %d)", err);
                     break;
                 }
-                ring_buf_get_finish(&sim_ring_buffer, claimed);
+                err = ring_buf_get_finish(&sim_ring_buffer, claimed);
+                if (err)
+                {
+                    LOG_ERR("Unable to claim buffer (err %d)", err);
+                    break;
+                }
                 sent_data += claimed;
             }
         }
