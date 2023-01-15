@@ -14,6 +14,7 @@ uint32_t conv_raw_to_u24(uint8_t *raw, uint16_t pos);
 int32_t conv_u24_to_i32(uint32_t u24_val);
 uint32_t conv_i32_to_u24(int32_t i32_val);
 uint8_t *conv_u24_to_raw(uint32_t u24_val, uint8_t *raw, uint16_t pos);
+uint8_t *conv_u24_to_raw_big_end(uint32_t u24_val, uint8_t *raw, uint16_t pos);
 
 uint8_t* utils_write_timestamp(uint8_t* data);
 void utils_reset_timestamp();

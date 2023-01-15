@@ -22,25 +22,43 @@ RING_BUF_DECLARE(sim_ring_buffer, ADS129x_DATA_BUFFER_SIZE*5*4);
 static uint32_t bytes_to_send = 0;
 static uint32_t replay_runs = 0;
 
+const uint8_t leads_num = ADS129X_ECG_NUM+1;
+
+void _dump_data(uint32_t *input_data)
+{
+    int32_t data[leads_num];
+    char print_buf[leads_num * 30 + 1];
+    uint8_t print_buf_pos = 0;
+
+    for (int i = 0; i < leads_num; i++)
+    {
+        data[i] = conv_u24_to_i32(conv_raw_to_u24((uint8_t*)(&input_data[i]), 0));
+        print_buf_pos += snprintk(print_buf + print_buf_pos, sizeof(print_buf) - print_buf_pos, "%9" PRIi32 " ", data[i]);
+    }
+    LOG_INF("%s", print_buf);
+}
+
 int32_t sim_load_row_data(uint8_t *load_data, uint32_t* sim_pos) {
     uint8_t* tmp = utils_write_timestamp(load_data);
 
     *sim_pos = (*sim_pos) % SIM_X;
     for (int i = 0; i < SIM_Y; i++)
     {
-        tmp = conv_u24_to_raw(sim_data[*sim_pos][i], tmp, 0);
+        tmp = conv_u24_to_raw_big_end(sim_data[*sim_pos][i], tmp, 0);
+        //tmp = conv_u24_to_raw(sim_data[*sim_pos][i], tmp, 0);
     }
+   // _dump_data(sim_data[*sim_pos]);
     (*sim_pos)++;
     return SIM_Y*3 + 3;
 }
 
-
 static uint32_t sim_get_buff_size(uint32_t size) {
-    uint32_t target_frame_size = size > test_params.data_len->tx_max_len - 7 ? test_params.data_len->tx_max_len - 7 : size;
+    uint32_t max_packet_size =  test_params.data_len->tx_max_len - 7;
+    uint32_t target_frame_size = size > max_packet_size ? max_packet_size : size;
     if (test_params.fit_buffer) {
         target_frame_size = utils_roundUp(target_frame_size, ADS129x_DATA_BUFFER_SIZE);
 
-        if (target_frame_size + ADS129x_DATA_BUFFER_SIZE < test_params.data_len->tx_max_len - 7) {
+        if (target_frame_size + ADS129x_DATA_BUFFER_SIZE < max_packet_size) {
             target_frame_size += ADS129x_DATA_BUFFER_SIZE;
         }
     }
@@ -86,6 +104,11 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
                 claimed = ring_buf_put_claim(&sim_ring_buffer, &tmp_buff, remaining);
                 claimed = sim_get_data(tmp_buff, claimed, &sim_pos);
                 err = ring_buf_put_finish(&sim_ring_buffer, claimed);
+                if (err)
+                {
+                    LOG_ERR("Unable to claim buffer (err %d)", err);
+                    break;
+                }
                 load_data += claimed;
             }
         }
@@ -101,7 +124,12 @@ static uint32_t send_test_sim_data(uint32_t _bytes_to_send)
                     LOG_ERR("GATT write failed (err %d)", err);
                     break;
                 }
-                ring_buf_get_finish(&sim_ring_buffer, claimed);
+                err = ring_buf_get_finish(&sim_ring_buffer, claimed);
+                if (err)
+                {
+                    LOG_ERR("Unable to claim buffer (err %d)", err);
+                    break;
+                }
                 sent_data += claimed;
             }
         }

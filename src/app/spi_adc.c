@@ -607,11 +607,10 @@ void ads129x_enable_hrm_signal()
 void ads129x_enable_external_test()
 {
     // test mode
-    ads129x_safe_write_register(ADS129X_REG_CONFIG2, 0);
-
+    ads129x_safe_write_register(ADS129X_REG_CONFIG2, ADS129X_TEST_FREQ_2HZ | 1 << ADS129X_BIT_TEST_AMP | 1 << ADS129X_BIT_INT_TEST);
     for (int i = 1; i <= 8; i++)
     {
-        ads129x_configChannel(i, false, ADS129X_GAIN_6X, ADS129X_MUX_NORMAL);
+        ads129x_configChannel(i, false, ADS129X_GAIN_6X, ADS129X_MUX_TEST);
     }
 }
 

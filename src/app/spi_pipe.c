@@ -111,6 +111,7 @@ void ads129x_set_data()
     /* track status of buffers */
     static size_t bytes_written = 0;
     const size_t packet_size = sizeof(pipe_packet_t);
+
     /* add timestamp */
     utils_write_timestamp(tx_data.buffer);
 
@@ -121,8 +122,8 @@ void ads129x_set_data()
     {
         /* add missing leads */
         ads129x_load_augmented_leads(tx_data.packet.leads._buffer);
-
         ads129x_dump_data(tx_data.packet.leads._buffer);
+
         /* send data to the consumers */
         if (k_pipe_write_avail(&ads129x_pipe) < packet_size) {
             ads129x_config.packets_dropped++;
