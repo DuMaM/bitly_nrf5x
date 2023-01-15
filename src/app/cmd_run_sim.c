@@ -20,7 +20,7 @@ static struct k_thread sim_thread;
 
 RING_BUF_DECLARE(sim_ring_buffer, ADS129x_DATA_BUFFER_SIZE*5*4);
 static uint32_t bytes_to_send = 0;
-static uint32_t replay_runs = 0;
+static uint32_t sim_replay_runs = 0;
 
 const uint8_t leads_num = ADS129X_ECG_NUM+1;
 
@@ -144,7 +144,7 @@ static void sim_test_run()
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
 
 
-    while (replay_runs--)
+    while (sim_replay_runs--)
     {
         int64_t delta = 0;
         int64_t stamp = 0;
@@ -203,10 +203,10 @@ int sim_run_cmd(const struct shell *shell, size_t argc, char **argv)
         return -EINVAL;
     }
 
-    replay_runs = 1;
+    sim_replay_runs = 1;
     if (argc == 3)
     {
-        replay_runs = strtol(argv[2], NULL, 10);
+        sim_replay_runs = strtol(argv[2], NULL, 10);
     }
 
     /* initialize work item for test */

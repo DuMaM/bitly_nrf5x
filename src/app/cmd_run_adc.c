@@ -12,7 +12,7 @@
 
 extern uint8_t test_data_buffer[];
 extern uint16_t test_data_buffer_size;
-static uint32_t replay_runs = 0;
+static uint32_t adc_replay_runs = 0;
 
 LOG_MODULE_DECLARE(main);
 
@@ -111,7 +111,7 @@ static void adc_test_run()
     const struct bt_conn_le_phy_param *phy = test_params.phy;
     const struct bt_conn_le_data_len_param *data_len = test_params.data_len;
 
-    while (replay_runs--)
+    while (adc_replay_runs--)
     {
         int64_t delta;
         int64_t stamp;
@@ -189,10 +189,10 @@ int adc_run_cmd(const struct shell *shell, size_t argc, char **argv)
 
     LOG_DBG("Data read speed: %" PRIu32, bytes_to_send);
 
-    replay_runs = 1;
+    adc_replay_runs = 1;
     if (argc == 3)
     {
-        replay_runs = strtol(argv[2], NULL, 10);
+        adc_replay_runs = strtol(argv[2], NULL, 10);
     }
 
     /* initialize work item for test */
